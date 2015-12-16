@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory
+    android:title="Traffic Tracker Basic Settings">
+        <EditTextPreference
+            android:key="age_preference"
+            android:title="Age"
+            android:summary="Please enter your age"
+            android:dialogTitle="Enter your age"/>
+        <EditTextPreference
+            android:key="race_preference"
+            android:title="Race"
+            android:summary="Please enter your race"
+            android:dialogTitle="Enter your race"/>
+        <ListPreference
+            android:key="gender_preference"
+            android:title="Gender"
+            android:entries="@array/Gender"
+            android:entryValues="@array/GenderData"/>
+        <ListPreference
+            android:key="occupation_preference"
+            android:title="Occupation"
+            android:entries="@array/Occupation"
+            android:entryValues="@array/OccupationData"/>
+
+    </PreferenceCategory>
+</PreferenceScreen>
