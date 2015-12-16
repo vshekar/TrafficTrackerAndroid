@@ -42,7 +42,7 @@ public class TrackingActivity extends AppCompatActivity {
         intent = new Intent(this,TrackingActivity.TrackingService.class);
         this.startService(intent);
     }
-
+    //Test comment
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
