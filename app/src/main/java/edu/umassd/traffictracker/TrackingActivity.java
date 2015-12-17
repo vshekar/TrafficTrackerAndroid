@@ -22,6 +22,9 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.location.Geofence;
 
 import java.io.BufferedWriter;
@@ -37,7 +40,10 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.Date;
 import java.util.UUID;
-
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
 
 public class TrackingActivity extends AppCompatActivity {
     Intent intent;
@@ -46,6 +52,14 @@ public class TrackingActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tracking);
         intent = new Intent(this,TrackingActivity.TrackingService.class);
+        if(checkPlayServices()){
+            intent.putExtra("playService",true);
+            Toast.makeText(getApplicationContext(), "Found Google Play service", Toast.LENGTH_LONG).show();
+        }
+        else{
+            intent.putExtra("playService",false);
+            Toast.makeText(getApplicationContext(), "Did not find Google Play service", Toast.LENGTH_LONG).show();
+        }
         this.startService(intent);
     }
 
@@ -81,12 +95,16 @@ public class TrackingActivity extends AppCompatActivity {
 
     }
 
-    public static class TrackingService extends Service{
+    public static class TrackingService extends Service implements GoogleApiClient.ConnectionCallbacks,GoogleApiClient.OnConnectionFailedListener, LocationListener {
         private static final String TAG = "GPS_SERVICE";
         private LocationManager mLocationManager = null;
         private static final int LOCATION_INTERVAL = 1000;
         private static final float LOCATION_DISTANCE = 0f;
         private String filename;
+        private GoogleApiClient mGoogleApiClient;
+        private LocationRequest mLocationRequest;
+        private boolean playService;
+        private Intent thisintent;
 
         private class LocationListener implements android.location.LocationListener{
             Location mLastLocation;
@@ -159,6 +177,25 @@ public class TrackingActivity extends AppCompatActivity {
                 new LocationListener(LocationManager.NETWORK_PROVIDER)
         };
 
+
+        @Override
+        public void onConnectionFailed(ConnectionResult result) {
+            Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = "
+                    + result.getErrorCode());
+        }
+
+        @Override
+        public void onConnected(Bundle arg0) {
+
+            // Once connected with google api, get the location
+            //displayLocation();
+        }
+
+        @Override
+        public void onConnectionSuspended(int arg0) {
+            mGoogleApiClient.connect();
+        }
+
         @Override
         public IBinder onBind(Intent arg0)
         {
@@ -170,37 +207,42 @@ public class TrackingActivity extends AppCompatActivity {
         {
             Log.e(TAG, "onStartCommand");
             super.onStartCommand(intent, flags, startId);
-            return START_STICKY;
-        }
+            thisintent= intent;
+            playService = thisintent.getBooleanExtra("playService",false);
 
-        @Override
-        public void onCreate()
-        {
-            Log.e(TAG, "onCreate");
+
             initializeLocationManager();
-            if(withinUniversity()) {
-                Context context = getApplicationContext();
 
-                //Naming the file (Random integer 0< n < 1000 + current UTC time)
-                Random rand = new Random();
-                int n = rand.nextInt(1000);
-                filename = Integer.toString(n);
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
-                sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-                String utcTime = sdf.format(new Date());
-                filename = filename +"-"+ utcTime + ".csv";
+            Context context = getApplicationContext();
 
-                Toast.makeText(context, "Within University starting background process",
-                        Toast.LENGTH_LONG).show();
-                try {
-                    mLocationManager.requestLocationUpdates(
-                            LocationManager.NETWORK_PROVIDER, LOCATION_INTERVAL, LOCATION_DISTANCE,
-                            mLocationListeners[1]);
-                } catch (java.lang.SecurityException ex) {
-                    Log.i(TAG, "fail to request location update, ignore", ex);
-                } catch (IllegalArgumentException ex) {
-                    Log.d(TAG, "network provider does not exist, " + ex.getMessage());
+            //Naming the file (Random integer 0< n < 1000 + current UTC time)
+            Random rand = new Random();
+            int n = rand.nextInt(1000);
+            filename = Integer.toString(n);
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
+            sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+            String utcTime = sdf.format(new Date());
+            filename = filename +"-"+ utcTime + ".csv";
+
+            Toast.makeText(context, "Within University starting background process",
+                    Toast.LENGTH_LONG).show();
+
+            if(playService)
+            {
+
+
+                //if (mGoogleApiClient != null) {
+                    mGoogleApiClient.connect();
+                //}
+                mLocationRequest = new LocationRequest();
+                mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+                if (mGoogleApiClient.isConnected()) {
+                    Log.e(TAG,"Connected to API");
+                    LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
                 }
+
+            }
+            else {
                 try {
                     mLocationManager.requestLocationUpdates(
                             LocationManager.GPS_PROVIDER, LOCATION_INTERVAL, LOCATION_DISTANCE,
@@ -210,29 +252,71 @@ public class TrackingActivity extends AppCompatActivity {
                 } catch (IllegalArgumentException ex) {
                     Log.d(TAG, "gps provider does not exist " + ex.getMessage());
                 }
-
-                //Adding first line to the file
-                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-                String line = "Age:";
-                line += prefs.getString("age_preference", "0");
-                line += ",Race:";
-                String text = "0";
-                Set<String> set = new HashSet<String>(Arrays.asList(text.split(" +")));
-                line += prefs.getStringSet("race_preference", set).toString();
-                line += ",Gender:";
-                line += prefs.getString("gender_preference", "0");
-                line += ",Occupation:";
-                line += prefs.getString("occupation_preference", "0");
-                line += "\n";
-                mLocationListeners[0].writeToFile(filename,line);
             }
-            else{
-                Context context = getApplicationContext();
-                Toast.makeText(context, "Outside University, Exiting process",
-                        Toast.LENGTH_LONG).show();
-                //Intent i = new Intent(this, MainActivity.class);
-                //startActivity(i);
-                stopSelf();
+            //Adding first line to the file
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+            String line = "Age:";
+            line += prefs.getString("age_preference", "0");
+            line += ",Race:";
+            String text = "0";
+            Set<String> set = new HashSet<String>(Arrays.asList(text.split(" +")));
+            line += prefs.getStringSet("race_preference", set).toString();
+            line += ",Gender:";
+            line += prefs.getString("gender_preference", "0");
+            line += ",Occupation:";
+            line += prefs.getString("occupation_preference", "0");
+            line += "\n";
+            mLocationListeners[0].writeToFile(filename,line);
+
+
+
+            return START_STICKY;
+        }
+
+        @Override
+        public void onCreate()
+        {
+            Log.e(TAG, "onCreate");
+            mGoogleApiClient = new GoogleApiClient.Builder(this)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .addApi(LocationServices.API).build();
+        }
+
+        @Override
+        public void onLocationChanged(Location location){
+            Log.e(TAG, "onLocationChanged GoogleAPI: " + location);
+            //mLastLocation.set(location);
+            double lat = location.getLatitude();
+            double lng = location.getLongitude();
+            final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+            final String utcTime = sdf.format(new Date());
+            String op = utcTime + "," + Double.toString(lat) + "," + Double.toString(lng) + "\n";
+            mLocationListeners[1].writeToFile(filename,op);
+        }
+
+
+        @Override
+        public void onDestroy()
+        {
+            Log.e(TAG, "onDestroy");
+            super.onDestroy();
+            if (mLocationManager != null) {
+                for (int i = 0; i < mLocationListeners.length; i++) {
+                    try {
+                        mLocationManager.removeUpdates(mLocationListeners[i]);
+                    } catch (Exception ex) {
+                        Log.i(TAG, "fail to remove location listeners, ignore", ex);
+                    }
+                }
+            }
+        }
+
+        private void initializeLocationManager() {
+            Log.e(TAG, "initializeLocationManager");
+            if (mLocationManager == null) {
+                mLocationManager = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
             }
         }
 
@@ -263,29 +347,24 @@ public class TrackingActivity extends AppCompatActivity {
             */
             return withinUniversity;
         }
+    }
 
-        @Override
-        public void onDestroy()
-        {
-            Log.e(TAG, "onDestroy");
-            super.onDestroy();
-            if (mLocationManager != null) {
-                for (int i = 0; i < mLocationListeners.length; i++) {
-                    try {
-                        mLocationManager.removeUpdates(mLocationListeners[i]);
-                    } catch (Exception ex) {
-                        Log.i(TAG, "fail to remove location listeners, ignore", ex);
-                    }
-                }
-            }
-        }
+    private boolean checkPlayServices() {
+        int resultCode = GooglePlayServicesUtil
+                .isGooglePlayServicesAvailable(this);
+        if (resultCode != ConnectionResult.SUCCESS) {
+            if (GooglePlayServicesUtil.isUserRecoverableError(resultCode)) {
+                GooglePlayServicesUtil.getErrorDialog(resultCode, this, 1000).show();
 
-        private void initializeLocationManager() {
-            Log.e(TAG, "initializeLocationManager");
-            if (mLocationManager == null) {
-                mLocationManager = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
+            } else {
+                Toast.makeText(getApplicationContext(),
+                        "This device is not supported.", Toast.LENGTH_LONG)
+                        .show();
+                finish();
             }
+            return false;
         }
+        return true;
     }
 
 
