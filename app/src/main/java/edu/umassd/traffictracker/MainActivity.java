@@ -63,8 +63,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void uploadFiles(View view){
-        AsyncTaskRunner asyncTaskRunner = new AsyncTaskRunner();
-        asyncTaskRunner.execute();
+
+        String[] paths;
+
+        try{
+            File root = Environment.getExternalStorageDirectory();
+            File outDir = new File(root.getAbsolutePath() + File.separator + "Traffic_tracker");
+            paths = outDir.list();
+
+
+            AsyncTaskRunner asyncTaskRunner = new AsyncTaskRunner();
+            asyncTaskRunner.execute(paths);
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+
 
     }
 
@@ -73,8 +87,9 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected String doInBackground(String... params) {
-            //String url_string = "http://134.88.13.215:8000/uploadToServer.php";
-            String url_string = "http://10.0.2.2:8000/cgi-bin/uploadToServer.py";
+            String url_string = "http://134.88.13.215:8000/uploadToServer.php";
+            //String url_string = "http://10.0.2.2:8000/cgi-bin/uploadToServer.py";
+
             int bytesRead, bytesAvailable, bufferSize;
             byte[] buffer;
             int maxBufferSize = 1 * 1024 * 1024;
@@ -83,67 +98,75 @@ public class MainActivity extends AppCompatActivity {
             String twoHyphens = "--";
             String boundary = "*****";
             Log.e(TAG, "doInBackground ");
-            try {
-                File root = Environment.getExternalStorageDirectory();
 
-                File outDir = new File(root.getAbsolutePath() + File.separator + "Traffic_tracker");
-                File outputFile = new File(outDir, "temp_gps.csv");
-                FileInputStream fileInputStream = new FileInputStream(outputFile);
+            for(String path:params) {
+                try {
+                    //path = path;
+                    Log.i("uploadFile", "Uploading File : " + path);
+                    File root = Environment.getExternalStorageDirectory();
 
-                URL url = new URL(url_string);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setDoInput(true); // Allow Inputs
-                conn.setDoOutput(true); // Allow Outputs
-                conn.setUseCaches(false); // Don't use a Cached Copy
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Connection", "Keep-Alive");
-                conn.setRequestProperty("ENCTYPE", "multipart/form-data");
-                conn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
-                conn.setRequestProperty("uploaded_file", outputFile.toString());
+                    File outDir = new File(root.getAbsolutePath() + File.separator + "Traffic_tracker");
+                    //File outputFile = new File(outDir, "temp_gps.csv");
+                    File outputFile = new File(outDir, path);
+                    FileInputStream fileInputStream = new FileInputStream(outputFile);
 
-                dos = new DataOutputStream(conn.getOutputStream());
+                    URL url = new URL(url_string);
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setDoInput(true); // Allow Inputs
+                    conn.setDoOutput(true); // Allow Outputs
+                    conn.setUseCaches(false); // Don't use a Cached Copy
+                    conn.setRequestMethod("POST");
+                    conn.setRequestProperty("Connection", "Keep-Alive");
+                    conn.setRequestProperty("ENCTYPE", "multipart/form-data");
+                    conn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
+                    conn.setRequestProperty("uploaded_file", outputFile.toString());
 
-                dos.writeBytes(twoHyphens + boundary + lineEnd);
-                dos.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\";filename=\"" + outputFile.toString() + "\"" + lineEnd);
+                    dos = new DataOutputStream(conn.getOutputStream());
 
-                        dos.writeBytes(lineEnd);
+                    dos.writeBytes(twoHyphens + boundary + lineEnd);
+                    dos.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\";filename=\"" + outputFile.toString() + "\"" + lineEnd);
 
-                // create a buffer of  maximum size
-                bytesAvailable = fileInputStream.available();
+                    dos.writeBytes(lineEnd);
 
-                bufferSize = Math.min(bytesAvailable, maxBufferSize);
-                buffer = new byte[bufferSize];
-
-                // read file and write it into form...
-                bytesRead = fileInputStream.read(buffer, 0, bufferSize);
-
-                while (bytesRead > 0) {
-
-                    dos.write(buffer, 0, bufferSize);
+                    // create a buffer of  maximum size
                     bytesAvailable = fileInputStream.available();
+
                     bufferSize = Math.min(bytesAvailable, maxBufferSize);
+                    buffer = new byte[bufferSize];
+
+                    // read file and write it into form...
                     bytesRead = fileInputStream.read(buffer, 0, bufferSize);
 
+                    while (bytesRead > 0) {
+
+                        dos.write(buffer, 0, bufferSize);
+                        bytesAvailable = fileInputStream.available();
+                        bufferSize = Math.min(bytesAvailable, maxBufferSize);
+                        bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+
+                    }
+
+                    // send multipart form data necesssary after file data...
+                    dos.writeBytes(lineEnd);
+                    dos.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
+
+                    int serverResponseCode = conn.getResponseCode();
+                    String serverResponseMessage = conn.getResponseMessage();
+
+                    Log.i("uploadFile", "HTTP Response is : "
+                            + serverResponseMessage + ": " + serverResponseCode);
+                    fileInputStream.close();
+                    dos.flush();
+                    dos.close();
+                    if (serverResponseCode == 200){
+                        Log.i("uploadFile", "Upload successful, Deleting File : " + path);
+                        outputFile.delete();
+                    }
+
+
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-
-                // send multipart form data necesssary after file data...
-                dos.writeBytes(lineEnd);
-                dos.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
-
-                int serverResponseCode = conn.getResponseCode();
-                String serverResponseMessage = conn.getResponseMessage();
-
-                Log.i("uploadFile", "HTTP Response is : "
-                        + serverResponseMessage + ": " + serverResponseCode);
-                fileInputStream.close();
-                dos.flush();
-                dos.close();
-
-
-
-            }
-            catch (Exception e){
-                e.printStackTrace();
             }
             return null;
         }

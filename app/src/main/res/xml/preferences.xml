@@ -4,14 +4,16 @@
     android:title="Traffic Tracker Basic Settings">
         <EditTextPreference
             android:key="age_preference"
+            android:inputType="number"
             android:title="Age"
-            android:summary="Please enter your age"
-            android:dialogTitle="Enter your age"/>
-        <EditTextPreference
+            android:summary="Select to enter your age"
+            android:dialogTitle="Enter your age \n (Enter 0 if you do not wish to share)"/>
+        <MultiSelectListPreference
             android:key="race_preference"
             android:title="Race"
-            android:summary="Please enter your race"
-            android:dialogTitle="Enter your race"/>
+            android:summary="Select your race"
+            android:entries="@array/Race"
+            android:entryValues="@array/RaceData"/>
         <ListPreference
             android:key="gender_preference"
             android:title="Gender"

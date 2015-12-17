@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 
 
+import android.content.SharedPreferences;
 import android.location.Location;
 
 import android.location.LocationManager;
@@ -13,6 +14,7 @@ import android.location.LocationManager;
 import android.os.Environment;
 import android.os.IBinder;
 
+import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -28,6 +30,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Random;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.Date;
 import java.util.UUID;
@@ -42,7 +48,7 @@ public class TrackingActivity extends AppCompatActivity {
         intent = new Intent(this,TrackingActivity.TrackingService.class);
         this.startService(intent);
     }
-    //Test comment
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -66,9 +72,13 @@ public class TrackingActivity extends AppCompatActivity {
     }
 
     public void stopTracking(View view){
+
         this.stopService(intent);
+
+
         Intent i = new Intent(this, MainActivity.class);
         startActivity(i);
+
     }
 
     public static class TrackingService extends Service{
@@ -76,6 +86,7 @@ public class TrackingActivity extends AppCompatActivity {
         private LocationManager mLocationManager = null;
         private static final int LOCATION_INTERVAL = 1000;
         private static final float LOCATION_DISTANCE = 0f;
+        private String filename;
 
         private class LocationListener implements android.location.LocationListener{
             Location mLastLocation;
@@ -95,7 +106,7 @@ public class TrackingActivity extends AppCompatActivity {
                 sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
                 final String utcTime = sdf.format(new Date());
                 String op = utcTime + "," + Double.toString(lat) + "," + Double.toString(lng) + "\n";
-                writeToFile("temp_gps.csv",op);
+                writeToFile(filename,op);
             }
 
             public void writeToFile(String filename, String data){
@@ -106,9 +117,6 @@ public class TrackingActivity extends AppCompatActivity {
                 if (!outDir.exists()){
                    outDir.mkdirs();
                 }
-
-
-
                 try {
                     if (!outDir.isDirectory()) {
                         throw new IOException(
@@ -172,6 +180,16 @@ public class TrackingActivity extends AppCompatActivity {
             initializeLocationManager();
             if(withinUniversity()) {
                 Context context = getApplicationContext();
+
+                //Naming the file (Random integer 0< n < 1000 + current UTC time)
+                Random rand = new Random();
+                int n = rand.nextInt(1000);
+                filename = Integer.toString(n);
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
+                sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+                String utcTime = sdf.format(new Date());
+                filename = filename +"-"+ utcTime + ".csv";
+
                 Toast.makeText(context, "Within University starting background process",
                         Toast.LENGTH_LONG).show();
                 try {
@@ -192,6 +210,21 @@ public class TrackingActivity extends AppCompatActivity {
                 } catch (IllegalArgumentException ex) {
                     Log.d(TAG, "gps provider does not exist " + ex.getMessage());
                 }
+
+                //Adding first line to the file
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+                String line = "Age:";
+                line += prefs.getString("age_preference", "0");
+                line += ",Race:";
+                String text = "0";
+                Set<String> set = new HashSet<String>(Arrays.asList(text.split(" +")));
+                line += prefs.getStringSet("race_preference", set).toString();
+                line += ",Gender:";
+                line += prefs.getString("gender_preference", "0");
+                line += ",Occupation:";
+                line += prefs.getString("occupation_preference", "0");
+                line += "\n";
+                mLocationListeners[0].writeToFile(filename,line);
             }
             else{
                 Context context = getApplicationContext();
