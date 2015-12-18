@@ -45,7 +45,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
     private String filename;
     private GoogleApiClient mGoogleApiClient;
     private LocationRequest mLocationRequest;
-    private boolean playService;
+    private boolean playService = true;
     private Intent thisintent;
     private Location mLastLocation;
     private Geofence mGeofence;
@@ -147,7 +147,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
     @Override
     public IBinder onBind(Intent arg0)
     {
-        Log.e(TAG,"OnBind");
+        Log.e(TAG, "OnBind");
         return null;
     }
 
@@ -157,7 +157,9 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
         Log.e(TAG, "onStartCommand");
         super.onStartCommand(intent, flags, startId);
         thisintent= intent;
-        playService = intent.getBooleanExtra("playService", false);
+        if (intent!= null) {
+            playService = intent.getBooleanExtra("playService", false);
+        }
         initializeLocationManager();
 
         startTracking();
@@ -166,7 +168,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
     }
 
     public void stopTracking(){
-        Log.e(TAG,"stopTracking");
+        Log.e(TAG, "stopTracking");
         this.stopSelf();
     }
 
@@ -265,6 +267,14 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
                 }
             }
         }
+    }
+
+    @Override
+    public void onTaskRemoved(Intent rootIntent){
+        Log.e(TAG, "OnTaskRemoved");
+
+        super.onTaskRemoved(rootIntent);
+        this.stopSelf();
     }
 
     private void initializeLocationManager() {

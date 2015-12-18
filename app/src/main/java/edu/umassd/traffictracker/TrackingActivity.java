@@ -1,26 +1,20 @@
 package edu.umassd.traffictracker;
 
 
-import android.app.IntentService;
+
+import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.app.Service;
+
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 
 
 import android.content.ServiceConnection;
-import android.content.SharedPreferences;
-import android.location.Location;
-
-import android.location.LocationManager;
-
-import android.os.Environment;
 import android.os.IBinder;
-
-import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.NotificationCompat;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -28,7 +22,7 @@ import android.view.View;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesUtil;
+
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.Result;
 import com.google.android.gms.common.api.ResultCallback;
@@ -47,7 +41,8 @@ public class TrackingActivity extends AppCompatActivity implements GoogleApiClie
     String TAG = "TrackingActivity";
     boolean mBound = false;
 
-    private ServiceConnection mConnection = new ServiceConnection() {
+
+    public ServiceConnection mConnection = new ServiceConnection() {
 
         @Override
         public void onServiceConnected(ComponentName className,
@@ -91,7 +86,10 @@ public class TrackingActivity extends AppCompatActivity implements GoogleApiClie
 
         //Start the GPS data collection service
         //this.startService(intent);
+        //NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(this).setContentTitle("Traffic Tracker");
     }
+
+
 
     @Override
     public void onConnectionSuspended(int arg0) {
