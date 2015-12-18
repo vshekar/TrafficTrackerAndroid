@@ -33,8 +33,9 @@
             android:label="@string/title_activity_tracking" >
         </activity>
         <service
-            android:name=".TrackingActivity$TrackingService"
+            android:name=".TrackingService"
             android:exported="false"/>
+        <service android:name=".GeofenceTransitionsIntentService"/>
     </application>
 
 </manifest>
