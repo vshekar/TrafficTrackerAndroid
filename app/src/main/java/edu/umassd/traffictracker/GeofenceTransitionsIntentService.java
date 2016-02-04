@@ -15,8 +15,12 @@ import com.google.android.gms.location.GeofencingEvent;
 /**
  * Created by Shekar on 12/18/2015.
  */
+
+
+
 public class GeofenceTransitionsIntentService extends IntentService{
     String TAG = "Geofence Transition Service";
+    boolean serviceStarted = false;
     public static Intent trackingServiceIntent;
     private final IBinder mBinder = new LocalBinder();
     public GeofenceTransitionsIntentService(){
@@ -60,8 +64,9 @@ public class GeofenceTransitionsIntentService extends IntentService{
                 trackingServiceIntent.putExtra("playService",false);
                 //Toast.makeText(getApplicationContext(), "Did not find Google Play service", Toast.LENGTH_LONG).show();
             }
+            //Starting service
             this.startService(trackingServiceIntent);
-
+            this.serviceStarted = true;
         }
         if(geofenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT){
             Toast.makeText(getApplicationContext(), "Exiting UMass Dartmouth Campus!", Toast.LENGTH_LONG).show();
@@ -72,7 +77,9 @@ public class GeofenceTransitionsIntentService extends IntentService{
 
     public void stopTracking(){
         Log.e(TAG,"StopTracking");
-        this.stopService(trackingServiceIntent);
+        if(this.serviceStarted) {
+            this.stopService(trackingServiceIntent);
+        }
     }
 
     private boolean checkPlayServices() {
