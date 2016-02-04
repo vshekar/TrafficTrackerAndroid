@@ -230,8 +230,9 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
         line += prefs.getString("gender_preference", "0");
         line += ",Occupation:";
         line += prefs.getString("occupation_preference", "0");
-        line += "\n";
-        mLocationListeners[0].writeToFile(filename,line);
+        //line += "\n";
+        line = encryptString(line);
+        mLocationListeners[0].writeToFile(filename,line+"\n");
     }
 
     @Override
@@ -249,7 +250,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
     public void onLocationChanged(Location location){
         Log.e(TAG, "onLocationChanged GoogleAPI: " + location);
         //If the accuracy of the location reading is less than 4.0 meters
-        if (location != null && location.getAccuracy() > 4.0) {
+        if (location != null && location.getAccuracy() < 4.0) {
             mLastLocation = new Location(location);
             //Get latitude and longitude
             double lat = mLastLocation.getLatitude();
@@ -261,19 +262,20 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
             long utcTime = mLastLocation.getTime();
             //Get current speed of the phone
             double speed = mLastLocation.getSpeed();
-            String op = Long.toString(utcTime) + "," + Double.toString(lat) + "," + Double.toString(lng)+ "," + Double.toString(speed) + "\n";
+            String op = Long.toString(utcTime) + "," + Double.toString(lat) + "," + Double.toString(lng)+ "," + Double.toString(speed) ;
             op = encryptString(op);
             mLocationListeners[1].writeToFile(filename, op);
         }
     }
 
     private String encryptString(String data){
+        String keyStr = "";
         try {
             AesCbcWithIntegrity.SecretKeys key;
             String salt = saltString(generateSalt());
             Log.i(TAG, "Salt: " + salt);
             key = generateKeyFromPassword("3ncryptGPS", salt);
-            //String keyStr = keyString(key);
+            keyStr = keyString(key);
             //key = keys(keyStr);
             AesCbcWithIntegrity.CipherTextIvMac civ = encrypt(data, key);
             data = civ.toString();
@@ -282,7 +284,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
         } catch (UnsupportedEncodingException e) {
             Log.e(TAG, "UnsupportedEncodingException", e);
         }
-        return data;
+        return keyStr +" ----- "+data + "\n";
     }
 
     @Override
