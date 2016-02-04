@@ -25,7 +25,9 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.security.GeneralSecurityException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -33,6 +35,16 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 import java.util.TimeZone;
+
+import static edu.umassd.traffictracker.AesCbcWithIntegrity.decryptString;
+import static edu.umassd.traffictracker.AesCbcWithIntegrity.encrypt;
+import static edu.umassd.traffictracker.AesCbcWithIntegrity.generateKey;
+import static edu.umassd.traffictracker.AesCbcWithIntegrity.generateKeyFromPassword;
+import static edu.umassd.traffictracker.AesCbcWithIntegrity.generateSalt;
+import static edu.umassd.traffictracker.AesCbcWithIntegrity.keyString;
+import static edu.umassd.traffictracker.AesCbcWithIntegrity.keys;
+import static edu.umassd.traffictracker.AesCbcWithIntegrity.saltString;
+
 
 /**
  * Created by Shekar on 12/18/2015.
@@ -236,22 +248,45 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
     @Override
     public void onLocationChanged(Location location){
         Log.e(TAG, "onLocationChanged GoogleAPI: " + location);
-        if (location != null) {
+        //If the accuracy of the location reading is less than 4.0 meters
+        if (location != null && location.getAccuracy() > 4.0) {
             mLastLocation = new Location(location);
+            //Get latitude and longitude
             double lat = mLastLocation.getLatitude();
             double lng = mLastLocation.getLongitude();
-            final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-            final String utcTime = sdf.format(new Date());
-            String op = utcTime + "," + Double.toString(lat) + "," + Double.toString(lng) + "\n";
+            //Get current time stamp
+            //final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            //sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+            //final String utcTime = sdf.format(new Date());
+            long utcTime = mLastLocation.getTime();
+            //Get current speed of the phone
+            double speed = mLastLocation.getSpeed();
+            String op = Long.toString(utcTime) + "," + Double.toString(lat) + "," + Double.toString(lng)+ "," + Double.toString(speed) + "\n";
+            op = encryptString(op);
             mLocationListeners[1].writeToFile(filename, op);
         }
     }
 
+    private String encryptString(String data){
+        try {
+            AesCbcWithIntegrity.SecretKeys key;
+            String salt = saltString(generateSalt());
+            Log.i(TAG, "Salt: " + salt);
+            key = generateKeyFromPassword("3ncryptGPS", salt);
+            //String keyStr = keyString(key);
+            //key = keys(keyStr);
+            AesCbcWithIntegrity.CipherTextIvMac civ = encrypt(data, key);
+            data = civ.toString();
+        }catch (GeneralSecurityException e) {
+            Log.e(TAG, "GeneralSecurityException", e);
+        } catch (UnsupportedEncodingException e) {
+            Log.e(TAG, "UnsupportedEncodingException", e);
+        }
+        return data;
+    }
 
     @Override
-    public void onDestroy()
-    {
+    public void onDestroy() {
         Log.e(TAG, "onDestroy");
         super.onDestroy();
         if(playService){
