@@ -1,5 +1,6 @@
 package edu.umassd.traffictracker;
 
+import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -10,13 +11,13 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
+import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.Geofence;
-import com.google.android.gms.location.GeofencingEvent;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
@@ -61,6 +62,8 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
     private Intent thisintent;
     private Location mLastLocation;
     private Geofence mGeofence;
+
+
 
     private class LocationListener implements android.location.LocationListener{
         Location mLastLocation;
@@ -231,7 +234,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
         line += ",Occupation:";
         line += prefs.getString("occupation_preference", "0");
         //line += "\n";
-        line = encryptString(line);
+        //line = encryptString(line);
         mLocationListeners[0].writeToFile(filename,line+"\n");
     }
 
@@ -243,7 +246,6 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
                 .addApi(LocationServices.API).build();
-
     }
 
     @Override
@@ -263,7 +265,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
             //Get current speed of the phone
             double speed = mLastLocation.getSpeed();
             String op = Long.toString(utcTime) + "," + Double.toString(lat) + "," + Double.toString(lng)+ "," + Double.toString(speed) ;
-            op = encryptString(op);
+            //op = encryptString(op);
             mLocationListeners[1].writeToFile(filename, op);
         }
     }

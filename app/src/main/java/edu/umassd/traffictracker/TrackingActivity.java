@@ -1,7 +1,5 @@
 package edu.umassd.traffictracker;
 
-
-
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 
@@ -14,7 +12,7 @@ import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.app.NotificationCompat;
+import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -42,6 +40,7 @@ public class TrackingActivity extends AppCompatActivity implements GoogleApiClie
     boolean mBound = false;
 
 
+
     public ServiceConnection mConnection = new ServiceConnection() {
 
         @Override
@@ -62,21 +61,31 @@ public class TrackingActivity extends AppCompatActivity implements GoogleApiClie
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        //Setting layout as Tracking Activity
         setContentView(R.layout.activity_tracking);
+        //Building Geofence
         mGeofence = new Geofence.Builder()
                 .setRequestId("UmassDartmouth")
                 .setCircularRegion(41.628931, -71.006228,1000)
                 .setExpirationDuration(Geofence.NEVER_EXPIRE)
                 .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
                 .build();
-
+        //Setting geofence enter trigger
         gfEnter = new GeofencingRequest.Builder()
                 .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
                 .addGeofence(mGeofence)
                 .build();
+        //Starting Geofence transition service (A background service to keep track of whether the person has entered or left the geofence
         intent = new Intent(this, GeofenceTransitionsIntentService.class);
         mGeofencePendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        //Starting service
+        startService(intent);
+
+        //Binding service to the current activity (TrackingActivity can access public methods of GeofenceTransitionsIntentService.class
         bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+
+        //Connecting to Google API
         mGoogleApiClient = new GoogleApiClient.Builder(this)
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
@@ -84,9 +93,15 @@ public class TrackingActivity extends AppCompatActivity implements GoogleApiClie
 
         mGoogleApiClient.connect();
 
-        //Start the GPS data collection service
-        //this.startService(intent);
-        //NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(this).setContentTitle("Traffic Tracker");
+
+    }
+
+    @Override
+    protected void onDestroy(){
+        Log.e(TAG, "OnDestroy");
+        super.onDestroy();
+        unbindService(mConnection);
+        mBound = false;
     }
 
 
@@ -99,18 +114,22 @@ public class TrackingActivity extends AppCompatActivity implements GoogleApiClie
     @Override
     public void onConnected(Bundle arg0) {
 
-        // Once connected with google api, get the location
-        //displayLocation();
+        // Once connected with google api, Add the geofence
         Log.e(TAG, "Connected to API");
         LocationServices.GeofencingApi.addGeofences(
                 mGoogleApiClient,
                 gfEnter,
                 mGeofencePendingIntent
         ).setResultCallback(this);
+
+
+
     }
 
     @Override
     public void onResult(Result r){
+        //Shows the result of connecting to the Google Play API (
+        //TODO: Can fail, need to add notification to turn on GPS
         Log.e(TAG, "OnResult : " + r.toString());
 
     }
@@ -144,17 +163,20 @@ public class TrackingActivity extends AppCompatActivity implements GoogleApiClie
     }
 
     public void stopTracking(View view){
-        //this.stopService(intent);
-        //mGeofencePendingIntent.
+
+        //Remove the geofence
         LocationServices.GeofencingApi.removeGeofences(
                 mGoogleApiClient,
                 // This is the same pending intent that was used in addGeofences().
                 mGeofencePendingIntent
         ).setResultCallback(this); // Result processed in onResult().
 
+        //Checking if service is bound, If it is called the stopTracking() method
         if(mBound){
             Log.e(TAG,"Geofence service is bound. Stopping tracking service");
             mService.stopTracking();
+            unbindService(mConnection);
+            mBound = false;
             Toast.makeText(this, "Manually Stopped Tracking", Toast.LENGTH_SHORT).show();
         }
 
@@ -163,10 +185,4 @@ public class TrackingActivity extends AppCompatActivity implements GoogleApiClie
 
     }
 
-
-
-
-
-
-
-}
+}//End tracking activity
