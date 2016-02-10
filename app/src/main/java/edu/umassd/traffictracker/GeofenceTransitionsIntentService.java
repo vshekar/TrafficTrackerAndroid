@@ -3,6 +3,8 @@ package edu.umassd.traffictracker;
 import android.app.IntentService;
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.Service;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
@@ -21,21 +23,20 @@ import com.google.android.gms.location.GeofencingEvent;
 
 
 
-public class GeofenceTransitionsIntentService extends IntentService{
+public class GeofenceTransitionsIntentService extends Service {
     String TAG = "Geofence Transition Service";
     boolean serviceStarted = false;
     public static Intent trackingServiceIntent;
     private final IBinder mBinder = new LocalBinder();
     public GeofenceTransitionsIntentService(){
-        super("GeofenceTransitionsIntentService");
+        super();
     }
-
+    private Intent trackingActivityIntent;
+    private PendingIntent trackingActivityPendingIntent;
     //Create a notification. This will tell the user whether they are being tracked or not
-    private NotificationCompat.Builder mNotifyBuilder =
-            new NotificationCompat.Builder(this)
-                    .setSmallIcon(R.mipmap.ic_launcher)
-                    .setContentTitle("Traffic Tracker")
-                    .setContentText("Outside UMass Dartmouth Campus");
+    private NotificationCompat.Builder mNotifyBuilder;
+
+
     // Sets an ID for the notification
     private int mNotificationId = 001;
 
@@ -131,25 +132,39 @@ public class GeofenceTransitionsIntentService extends IntentService{
     public int onStartCommand(Intent intent, int flags, int startId){
         Log.e(TAG, "onStartCommand");
         super.onStartCommand(intent, flags, startId);
+        setupForeground();
+        onHandleIntent(intent);
 
         return START_STICKY;
     }
 
+    public void setupForeground(){
+        trackingActivityIntent = new Intent(this, TrackingActivity.class);
+        trackingActivityPendingIntent = PendingIntent.getActivity(this, 0, trackingActivityIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+        mNotifyBuilder = new NotificationCompat.Builder(this)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle("Traffic Tracker")
+                .setContentText("Outside UMass Dartmouth Campus")
+                .setContentIntent(trackingActivityPendingIntent)
+                .setAutoCancel(true);
+        startForeground(mNotificationId,mNotifyBuilder.build());
+    }
     @Override
     public void onCreate(){
         super.onCreate();
-        NotificationManager mNotifyMgr =
-                (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        //NotificationManager mNotifyMgr = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         // Builds the notification and issues it.
-        mNotifyMgr.notify(mNotificationId, mNotifyBuilder.build());
+        //mNotifyMgr.notify(mNotificationId, mNotifyBuilder.build());
     }
 
     @Override
     public void onDestroy(){
         //this.stopService(trackingServiceIntent);
-        NotificationManager mNotifyMgr =
-                (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        mNotifyMgr.cancelAll();
+        //NotificationManager mNotifyMgr = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        //mNotifyMgr.cancelAll();
+        super.onDestroy();
+        stopForeground(true);
+        stopSelf();
         Log.e(TAG,"OnDestroy Geofence");
     }
 

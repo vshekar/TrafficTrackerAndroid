@@ -1,5 +1,7 @@
 package edu.umassd.traffictracker;
 
+import android.app.ActivityManager;
+import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Environment;
@@ -20,7 +22,13 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        if (isMyServiceRunning(GeofenceTransitionsIntentService.class)){
+            Intent intent = new Intent(this, TrackingActivity.class);
+            startActivity(intent);
+        }
+        else {
+            setContentView(R.layout.activity_main);
+        }
     }
 
 
@@ -74,6 +82,16 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
+    }
+
+    private boolean isMyServiceRunning(Class<?> serviceClass) {
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private class AsyncTaskRunner extends AsyncTask<String, String, String> {

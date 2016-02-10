@@ -250,9 +250,9 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
 
     @Override
     public void onLocationChanged(Location location){
-        Log.e(TAG, "onLocationChanged GoogleAPI: " + location);
+        Log.e(TAG, "onLocationChanged GoogleAPI: " + Double.toString(location.getSpeed()));
         //If the accuracy of the location reading is less than 4.0 meters
-        if (location != null && location.getAccuracy() < 4.0) {
+        if (location != null) {
             mLastLocation = new Location(location);
             //Get latitude and longitude
             double lat = mLastLocation.getLatitude();
@@ -264,7 +264,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
             long utcTime = mLastLocation.getTime();
             //Get current speed of the phone
             double speed = mLastLocation.getSpeed();
-            String op = Long.toString(utcTime) + "," + Double.toString(lat) + "," + Double.toString(lng)+ "," + Double.toString(speed) ;
+            String op = Long.toString(utcTime) + "," + Double.toString(lat) + "," + Double.toString(lng)+ "," + Double.toString(speed) + "\n" ;
             //op = encryptString(op);
             mLocationListeners[1].writeToFile(filename, op);
         }
@@ -313,7 +313,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
         Log.e(TAG, "OnTaskRemoved");
 
         super.onTaskRemoved(rootIntent);
-        this.stopSelf();
+        //this.stopSelf();
     }
 
     private void initializeLocationManager() {
