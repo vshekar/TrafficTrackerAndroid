@@ -38,6 +38,7 @@ public class TrackingActivity extends AppCompatActivity implements GoogleApiClie
     GeofenceTransitionsIntentService mService;
     GoogleApiClient mGoogleApiClient;
     String TAG = "TrackingActivity";
+    boolean DEBUG = false;
     boolean mBound = false;
     boolean geofenceRunning = false;
 
@@ -106,7 +107,7 @@ public class TrackingActivity extends AppCompatActivity implements GoogleApiClie
 
     @Override
     protected void onDestroy(){
-        Log.e(TAG, "OnDestroy");
+        if(DEBUG)Log.e(TAG, "OnDestroy");
         super.onDestroy();
         if(mBound) {
             unbindService(mConnection);
@@ -125,10 +126,10 @@ public class TrackingActivity extends AppCompatActivity implements GoogleApiClie
     public void onConnected(Bundle arg0) {
 
         // Once connected with google api, Add the geofence
-        Log.e(TAG, "Connected to API");
+        if(DEBUG)Log.e(TAG, "Connected to API");
 
         if(!geofenceRunning) {
-            Log.e(TAG, "Service is not running adding pending intent");
+            if(DEBUG)Log.e(TAG, "Service is not running adding pending intent");
             LocationServices.GeofencingApi.addGeofences(
                     mGoogleApiClient,
                     gfEnter,
@@ -143,13 +144,13 @@ public class TrackingActivity extends AppCompatActivity implements GoogleApiClie
     public void onResult(Result r){
         //Shows the result of connecting to the Google Play API (
         //TODO: Can fail, need to add notification to turn on GPS
-        Log.e(TAG, "OnResult : " + r.toString());
+        if(DEBUG)Log.e(TAG, "OnResult : " + r.toString());
 
     }
 
     @Override
     public void onConnectionFailed(ConnectionResult result) {
-        Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = "
+        if(DEBUG)Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = "
                 + result.getErrorCode());
     }
 
@@ -186,7 +187,7 @@ public class TrackingActivity extends AppCompatActivity implements GoogleApiClie
 
         //Checking if service is bound, If it is called the stopTracking() method
         if(mBound){
-            Log.e(TAG,"Geofence service is bound. Stopping tracking service");
+            if(DEBUG)Log.e(TAG,"Geofence service is bound. Stopping tracking service");
             mService.stopTracking();
             unbindService(mConnection);
             mBound = false;

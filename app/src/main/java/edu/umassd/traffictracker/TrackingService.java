@@ -1,6 +1,6 @@
 package edu.umassd.traffictracker;
 
-import android.app.NotificationManager;
+
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -11,7 +11,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
-import android.support.v4.app.NotificationCompat;
+
 import android.util.Log;
 import android.widget.Toast;
 
@@ -52,6 +52,7 @@ import static edu.umassd.traffictracker.AesCbcWithIntegrity.saltString;
  */
 public class TrackingService extends Service implements GoogleApiClient.ConnectionCallbacks,GoogleApiClient.OnConnectionFailedListener, LocationListener {
     private static final String TAG = "GPS_SERVICE";
+    boolean DEBUG = false;
     private LocationManager mLocationManager = null;
     private static final int LOCATION_INTERVAL = 1000;
     private static final float LOCATION_DISTANCE = 0f;
@@ -69,13 +70,13 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
         Location mLastLocation;
         private Writer writer;
         public LocationListener(String provider){
-            Log.e(TAG, "LocationListener " + provider);
+            if(DEBUG)Log.e(TAG, "LocationListener " + provider);
             mLastLocation = new Location(provider);
         }
 
         @Override
         public void onLocationChanged(Location location){
-            Log.e(TAG, "onLocationChanged: " + location);
+            if(DEBUG)Log.e(TAG, "onLocationChanged: " + location);
             mLastLocation.set(location);
             double lat = mLastLocation.getLatitude();
             double lng = mLastLocation.getLongitude();
@@ -105,7 +106,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
 
                 writer.close();
             } catch (IOException e) {
-                Log.w("eztt", e.getMessage(), e);
+                if(DEBUG)Log.w("eztt", e.getMessage(), e);
                 Context context = getApplicationContext();
                 Toast.makeText(context, e.getMessage() + " Unable to write to external storage.",
                         Toast.LENGTH_LONG).show();
@@ -115,19 +116,19 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
 
         @Override
         public void onProviderDisabled(String provider){
-            Log.e(TAG, "onProviderDisabled: " + provider);
+            if(DEBUG)Log.e(TAG, "onProviderDisabled: " + provider);
         }
 
         @Override
         public void onProviderEnabled(String provider)
         {
-            Log.e(TAG, "onProviderEnabled: " + provider);
+            if(DEBUG)Log.e(TAG, "onProviderEnabled: " + provider);
         }
 
         @Override
         public void onStatusChanged(String provider, int status, Bundle extras)
         {
-            Log.e(TAG, "onStatusChanged: " + provider);
+            if(DEBUG)Log.e(TAG, "onStatusChanged: " + provider);
         }
     }
 
@@ -140,7 +141,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
 
     @Override
      public void onConnectionFailed(ConnectionResult result) {
-        Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = "
+        if(DEBUG)Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = "
                 + result.getErrorCode());
     }
 
@@ -149,7 +150,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
 
         // Once connected with google api, get the location
         //displayLocation();
-        Log.e(TAG, "Connected to API");
+        if(DEBUG)Log.e(TAG, "Connected to API");
         LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
 
     }
@@ -162,14 +163,14 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
     @Override
     public IBinder onBind(Intent arg0)
     {
-        Log.e(TAG, "OnBind");
+        if(DEBUG)Log.e(TAG, "OnBind");
         return null;
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId)
     {
-        Log.e(TAG, "onStartCommand");
+        if(DEBUG)Log.e(TAG, "onStartCommand");
         super.onStartCommand(intent, flags, startId);
         thisintent= intent;
         if (intent!= null) {
@@ -183,7 +184,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
     }
 
     public void stopTracking(){
-        Log.e(TAG, "stopTracking");
+        if(DEBUG)Log.e(TAG, "stopTracking");
         this.stopSelf();
     }
 
@@ -216,9 +217,9 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
                         LocationManager.GPS_PROVIDER, LOCATION_INTERVAL, LOCATION_DISTANCE,
                         mLocationListeners[0]);
             } catch (java.lang.SecurityException ex) {
-                Log.i(TAG, "fail to request location update, ignore", ex);
+                if(DEBUG) Log.i(TAG, "fail to request location update, ignore", ex);
             } catch (IllegalArgumentException ex) {
-                Log.d(TAG, "gps provider does not exist " + ex.getMessage());
+                if(DEBUG)Log.d(TAG, "gps provider does not exist " + ex.getMessage());
             }
         }
         //Adding first line to the file
@@ -241,7 +242,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
     @Override
     public void onCreate()
     {
-        Log.e(TAG, "onCreate");
+        if(DEBUG)Log.e(TAG, "onCreate");
         mGoogleApiClient = new GoogleApiClient.Builder(this)
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
@@ -250,7 +251,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
 
     @Override
     public void onLocationChanged(Location location){
-        Log.e(TAG, "onLocationChanged GoogleAPI: " + Double.toString(location.getSpeed()));
+        if(DEBUG)Log.e(TAG, "onLocationChanged GoogleAPI: " + Double.toString(location.getSpeed()));
         //If the accuracy of the location reading is less than 4.0 meters
         if (location != null) {
             mLastLocation = new Location(location);
@@ -264,7 +265,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
             long utcTime = mLastLocation.getTime();
             //Get current speed of the phone
             double speed = mLastLocation.getSpeed();
-            String op = Long.toString(utcTime) + "," + Double.toString(lat) + "," + Double.toString(lng)+ "," + Double.toString(speed) + "\n" ;
+            String op = Long.toString(utcTime) + "," + Double.toString(lat) + "," + Double.toString(lng)+ "," + Double.toString(speed)+ "," + Double.toString(mLastLocation.getAccuracy()) + "\n" ;
             //op = encryptString(op);
             mLocationListeners[1].writeToFile(filename, op);
         }
@@ -275,7 +276,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
         try {
             AesCbcWithIntegrity.SecretKeys key;
             String salt = saltString(generateSalt());
-            Log.i(TAG, "Salt: " + salt);
+            if(DEBUG)Log.i(TAG, "Salt: " + salt);
             key = generateKeyFromPassword("3ncryptGPS", salt);
             keyStr = keyString(key);
             //key = keys(keyStr);
@@ -291,7 +292,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
 
     @Override
     public void onDestroy() {
-        Log.e(TAG, "onDestroy");
+        if(DEBUG)Log.e(TAG, "onDestroy");
         super.onDestroy();
         if(playService){
             LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
@@ -310,14 +311,14 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
 
     @Override
     public void onTaskRemoved(Intent rootIntent){
-        Log.e(TAG, "OnTaskRemoved");
+        if(DEBUG)Log.e(TAG, "OnTaskRemoved");
 
         super.onTaskRemoved(rootIntent);
         //this.stopSelf();
     }
 
     private void initializeLocationManager() {
-        Log.e(TAG, "initializeLocationManager");
+        if(DEBUG)Log.e(TAG, "initializeLocationManager");
         if (mLocationManager == null) {
             mLocationManager = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
         }

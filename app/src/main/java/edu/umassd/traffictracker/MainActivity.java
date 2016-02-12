@@ -1,10 +1,16 @@
 package edu.umassd.traffictracker;
 
 import android.app.ActivityManager;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Environment;
+import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -67,20 +73,56 @@ public class MainActivity extends AppCompatActivity {
     public void uploadFiles(View view){
 
         String[] paths;
+        ConnectivityManager connMgr = (ConnectivityManager)
+                getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
 
-        try{
-            File root = Environment.getExternalStorageDirectory();
-            File outDir = new File(root.getAbsolutePath() + File.separator + "Traffic_tracker");
-            paths = outDir.list();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean wifiOnly = prefs.getBoolean("wifi_upload", true);
+        boolean allowUpload = false;
+        boolean wifiActive = connMgr.getNetworkInfo(ConnectivityManager.TYPE_WIFI).isConnected();
+        String message = "No internet connection detected. Please check network connectivity";
 
-
-            AsyncTaskRunner asyncTaskRunner = new AsyncTaskRunner();
-            asyncTaskRunner.execute(paths);
-
-        }catch(Exception e){
-            e.printStackTrace();
+        if(networkInfo != null && networkInfo.isConnected()){
+            if ((wifiOnly && wifiActive) || (!wifiOnly))
+                allowUpload = true;
+            else
+                message = "No wifi connection detected. Please enable wifi or change setting to upload using cell phone network";
         }
 
+        if (!allowUpload){
+            AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+            alertDialogBuilder.setTitle("Not connected to the internet")
+                    .setMessage(message)
+                    .setCancelable(true)
+                    .setNeutralButton("OK", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            dialogInterface.cancel();
+                        }
+                    });
+
+            AlertDialog alertDialog = alertDialogBuilder.create();
+            alertDialog.show();
+        }
+
+
+
+        if (allowUpload) {
+
+            try {
+                File root = Environment.getExternalStorageDirectory();
+                File outDir = new File(root.getAbsolutePath() + File.separator + "Traffic_tracker");
+                paths = outDir.list();
+
+
+                AsyncTaskRunner asyncTaskRunner = new AsyncTaskRunner();
+                asyncTaskRunner.execute(paths);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
 
     }
 
@@ -96,10 +138,12 @@ public class MainActivity extends AppCompatActivity {
 
     private class AsyncTaskRunner extends AsyncTask<String, String, String> {
         private static final String TAG = "UPLOAD_TASK";
+        boolean DEBUG = false;
 
         @Override
         protected String doInBackground(String... params) {
-            String url_string = "http://134.88.13.215:8000/uploadToServer.php";
+            //String url_string = "http://134.88.13.215:8000/uploadToServer.php";
+            String url_string = "http://134.88.13.215:8000/uploadToServer.py";
             //String url_string = "http://10.0.2.2:8000/cgi-bin/uploadToServer.py";
 
             int bytesRead, bytesAvailable, bufferSize;
@@ -109,7 +153,7 @@ public class MainActivity extends AppCompatActivity {
             String lineEnd = "\r\n";
             String twoHyphens = "--";
             String boundary = "*****";
-            Log.e(TAG, "doInBackground ");
+            if(DEBUG)Log.e(TAG, "doInBackground ");
 
             for(String path:params) {
                 try {

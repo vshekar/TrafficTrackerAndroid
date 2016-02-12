@@ -25,6 +25,7 @@ import com.google.android.gms.location.GeofencingEvent;
 
 public class GeofenceTransitionsIntentService extends Service {
     String TAG = "Geofence Transition Service";
+    boolean DEBUG = false;
     boolean serviceStarted = false;
     public static Intent trackingServiceIntent;
     private final IBinder mBinder = new LocalBinder();
@@ -57,7 +58,7 @@ public class GeofenceTransitionsIntentService extends Service {
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
         if (geofencingEvent.hasError()) {
             String errorMessage = "Geofence Error!";
-            Log.e(TAG, errorMessage);
+            if(DEBUG)Log.e(TAG, errorMessage);
             return;
         }
 
@@ -68,7 +69,7 @@ public class GeofenceTransitionsIntentService extends Service {
 
         // Test that the reported transition was of interest.
         if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER ) {
-            Log.e(TAG, "GEOFENCE_TRANSITION_ENTER");
+            if(DEBUG)Log.e(TAG, "GEOFENCE_TRANSITION_ENTER");
             Toast.makeText(getApplicationContext(), "Entered UMass Dartmouth Campus!", Toast.LENGTH_LONG).show();
             mNotifyBuilder.setContentText("Entering UMass. Status : Tracking");
             NotificationManager mNotifyMgr =
@@ -97,17 +98,17 @@ public class GeofenceTransitionsIntentService extends Service {
             mNotifyMgr.notify(
                     mNotificationId,
                     mNotifyBuilder.build());
-            Log.e(TAG, "GEOFENCE_TRANSITION_EXIT");
+            if(DEBUG)Log.e(TAG, "GEOFENCE_TRANSITION_EXIT");
             stopTracking();
         }
     }
 
     public void stopTracking(){
-        Log.e(TAG,"StopTracking");
+        if(DEBUG)Log.e(TAG,"StopTracking");
         if(this.serviceStarted) {
             this.stopService(trackingServiceIntent);
         }
-        Log.e(TAG,"StopSelf");
+        if(DEBUG)Log.e(TAG,"StopSelf");
         this.stopSelf();
     }
 
@@ -117,9 +118,9 @@ public class GeofenceTransitionsIntentService extends Service {
         if (resultCode != ConnectionResult.SUCCESS) {
             if (GooglePlayServicesUtil.isUserRecoverableError(resultCode)) {
                 //GooglePlayServicesUtil.getErrorDialog(resultCode, this, 1000).show();
-                Log.e(TAG, "Error in google play services");
+                if(DEBUG)Log.e(TAG, "Error in google play services");
             } else {
-                Log.e(TAG, "Device is not supported");
+                if(DEBUG)Log.e(TAG, "Device is not supported");
 
             }
             return false;
@@ -130,7 +131,7 @@ public class GeofenceTransitionsIntentService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId){
-        Log.e(TAG, "onStartCommand");
+        if(DEBUG)Log.e(TAG, "onStartCommand");
         super.onStartCommand(intent, flags, startId);
         setupForeground();
         onHandleIntent(intent);
@@ -165,7 +166,7 @@ public class GeofenceTransitionsIntentService extends Service {
         super.onDestroy();
         stopForeground(true);
         stopSelf();
-        Log.e(TAG,"OnDestroy Geofence");
+        if(DEBUG)Log.e(TAG,"OnDestroy Geofence");
     }
 
 }
