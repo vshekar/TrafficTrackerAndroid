@@ -25,7 +25,7 @@ import com.google.android.gms.location.GeofencingEvent;
 
 public class GeofenceTransitionsIntentService extends Service {
     String TAG = "Geofence Transition Service";
-    boolean DEBUG = false;
+    boolean DEBUG = true;
     boolean serviceStarted = false;
     public static Intent trackingServiceIntent;
     private final IBinder mBinder = new LocalBinder();
@@ -54,7 +54,7 @@ public class GeofenceTransitionsIntentService extends Service {
     }
 
 
-    protected void onHandleIntent(Intent intent) {
+    protected void handleIntent(Intent intent) {
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
         if (geofencingEvent.hasError()) {
             String errorMessage = "Geofence Error!";
@@ -134,7 +134,7 @@ public class GeofenceTransitionsIntentService extends Service {
         if(DEBUG)Log.e(TAG, "onStartCommand");
         super.onStartCommand(intent, flags, startId);
         setupForeground();
-        onHandleIntent(intent);
+        handleIntent(intent);
 
         return START_STICKY;
     }

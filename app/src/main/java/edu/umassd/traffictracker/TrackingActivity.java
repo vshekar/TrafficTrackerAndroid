@@ -1,15 +1,18 @@
 package edu.umassd.traffictracker;
 
 import android.app.ActivityManager;
+import android.app.AlertDialog;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 
 
 import android.content.ServiceConnection;
+import android.location.LocationManager;
 import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -38,9 +41,10 @@ public class TrackingActivity extends AppCompatActivity implements GoogleApiClie
     GeofenceTransitionsIntentService mService;
     GoogleApiClient mGoogleApiClient;
     String TAG = "TrackingActivity";
-    boolean DEBUG = false;
+    boolean DEBUG = true;
     boolean mBound = false;
     boolean geofenceRunning = false;
+    LocationManager locationManager;
 
 
 
@@ -63,6 +67,7 @@ public class TrackingActivity extends AppCompatActivity implements GoogleApiClie
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        if(DEBUG)Log.e(TAG, "OnCreate");
         super.onCreate(savedInstanceState);
         //Setting layout as Tracking Activity
         setContentView(R.layout.activity_tracking);
@@ -102,7 +107,24 @@ public class TrackingActivity extends AppCompatActivity implements GoogleApiClie
 
         //Binding service to the current activity (TrackingActivity can access public methods of GeofenceTransitionsIntentService.class
         bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+        checkGPS();
+    }
 
+    public void checkGPS(){
+        locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+        if( !locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("GPS not enabled");  // GPS not found
+            builder.setMessage("Would you like to enable GPS?"); // Want to enable?
+            builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialogInterface, int i) {
+                    startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+                }
+            });
+            builder.setNegativeButton("No", null);
+            builder.create().show();
+            return;
+        }
     }
 
     @Override
@@ -113,6 +135,7 @@ public class TrackingActivity extends AppCompatActivity implements GoogleApiClie
             unbindService(mConnection);
             mBound = false;
         }
+
     }
 
 
@@ -128,7 +151,7 @@ public class TrackingActivity extends AppCompatActivity implements GoogleApiClie
         // Once connected with google api, Add the geofence
         if(DEBUG)Log.e(TAG, "Connected to API");
 
-        if(!geofenceRunning) {
+        if(geofenceRunning) {
             if(DEBUG)Log.e(TAG, "Service is not running adding pending intent");
             LocationServices.GeofencingApi.addGeofences(
                     mGoogleApiClient,
@@ -177,14 +200,14 @@ public class TrackingActivity extends AppCompatActivity implements GoogleApiClie
     }
 
     public void stopTracking(View view){
-
-        //Remove the geofence
-        LocationServices.GeofencingApi.removeGeofences(
-                mGoogleApiClient,
-                // This is the same pending intent that was used in addGeofences().
-                mGeofencePendingIntent
-        ).setResultCallback(this); // Result processed in onResult().
-
+        if(geofenceRunning) {
+            //Remove the geofence
+            LocationServices.GeofencingApi.removeGeofences(
+                    mGoogleApiClient,
+                    // This is the same pending intent that was used in addGeofences().
+                    mGeofencePendingIntent
+            ).setResultCallback(this); // Result processed in onResult().
+        }
         //Checking if service is bound, If it is called the stopTracking() method
         if(mBound){
             if(DEBUG)Log.e(TAG,"Geofence service is bound. Stopping tracking service");
