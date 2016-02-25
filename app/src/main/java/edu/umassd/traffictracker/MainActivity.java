@@ -2,14 +2,19 @@ package edu.umassd.traffictracker;
 
 import android.app.ActivityManager;
 import android.app.AlertDialog;
+import android.app.PendingIntent;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.location.LocationManager;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
+
 import android.os.AsyncTask;
 import android.os.Environment;
+import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -17,26 +22,187 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import android.widget.Toast;
 
-public class MainActivity extends AppCompatActivity {
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.Result;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.location.Geofence;
+import com.google.android.gms.location.GeofencingRequest;
+import com.google.android.gms.location.LocationServices;
+
+
+
+public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,GoogleApiClient.OnConnectionFailedListener, ResultCallback {
+    public Geofence mGeofence;
+    public GeofencingRequest gfEnter;
+    public PendingIntent mGeofencePendingIntent;
+    public GoogleApiClient mGoogleApiClient;
+    public boolean mBound = false;
+    public GeofenceTransitionsIntentService mService;
+    public LocationManager locationManager;
+    String TAG = "MainActivity";
+    boolean DEBUG = false;
+    boolean geofenceRunning = false;
+    public Intent intent;
+
+    public ServiceConnection mConnection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName className,
+                                       IBinder service) {
+            // We've bound to LocalService, cast the IBinder and get LocalService instance
+            GeofenceTransitionsIntentService.LocalBinder binder = (GeofenceTransitionsIntentService.LocalBinder) service;
+            mService = binder.getService();
+            mBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0) {
+            mBound = false;
+        }
+    };
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        if(DEBUG)Log.e(TAG, "OnCreate");
         super.onCreate(savedInstanceState);
-        if (isMyServiceRunning(GeofenceTransitionsIntentService.class)){
-            Intent intent = new Intent(this, TrackingActivity.class);
-            startActivity(intent);
+        boolean ftc = firstTimeCheck();
+
+        if (isMyServiceRunning(GeofenceTransitionsIntentService.class) && !ftc){
+            //If the geofencetransition is running already show status
+            if(DEBUG)Log.e(TAG, "geofencetransition IS running!");
+            intent = new Intent(this, GeofenceTransitionsIntentService.class);
+            setContentView(R.layout.activity_main);
+        }
+        else if (ftc){
+            //If app is started for the first time, show settings
+            //TODO: Add IRB approval form
+            Intent i = new Intent(this, Settings.class);
+            startActivity(i);
         }
         else {
+            if(DEBUG)Log.e(TAG, "geofencetransition is not running");
+            //geofencetransition is not running, start it here
             setContentView(R.layout.activity_main);
+            buildGeofence();
+            intent = new Intent(this, GeofenceTransitionsIntentService.class);
+            startService(intent);
+            connectGoogleApiClient(intent);
+            //Bind the geofenceTransition service to access its methods
+            bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+            checkGPS();
         }
     }
 
+    @Override
+    protected void onDestroy(){
+        if(DEBUG)Log.e(TAG, "OnDestroy");
+        super.onDestroy();
+        if(mBound) {
+            unbindService(mConnection);
+            mBound = false;
+        }
+    }
+
+    @Override
+    public void onConnected(Bundle arg0) {
+        // Once connected with google api, Add the geofence
+        if(DEBUG)Log.e(TAG, "Connected to API");
+        if(!geofenceRunning) {
+            if(DEBUG)Log.e(TAG, "Adding Geofences");
+            LocationServices.GeofencingApi.addGeofences(
+                    mGoogleApiClient,
+                    gfEnter,
+                    mGeofencePendingIntent
+            ).setResultCallback(this);
+            geofenceRunning = true;
+        }
+    }
+
+    @Override
+    public void onResult(Result r){
+        //Shows the result of connecting to the Google Play API (
+        //TODO: Can fail, need to add notification to turn on GPS
+        if(DEBUG)Log.e(TAG, "OnResult : " + r.toString());
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult result) {
+        if(DEBUG)Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = "
+                + result.getErrorCode());
+    }
+
+    @Override
+    public void onConnectionSuspended(int arg0) {
+        mGoogleApiClient.connect();
+    }
+
+
+
+    public void checkGPS(){
+        locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+        if( !locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("GPS not enabled");  // GPS not found
+            builder.setMessage("Would you like to enable GPS?"); // Want to enable?
+            builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialogInterface, int i) {
+                    startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+                }
+            });
+            builder.setNegativeButton("No", null);
+            builder.create().show();
+            return;
+        }
+    }
+
+    public void connectGoogleApiClient(Intent intent){
+        mGeofencePendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        //Connecting to Google API
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API).build();
+        mGoogleApiClient.connect();
+    }
+
+    public void buildGeofence(){
+        mGeofence = new Geofence.Builder()
+                .setRequestId("UmassDartmouth")
+                .setCircularRegion(41.628931, -71.006228, 1000)
+                .setExpirationDuration(Geofence.NEVER_EXPIRE)
+                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
+                .build();
+
+        //Setting geofence enter trigger
+        gfEnter = new GeofencingRequest.Builder()
+                .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
+                .addGeofence(mGeofence)
+                .build();
+    }
+
+    public void exitApp(View view){
+        //Triggered when user clicks "Exit App"
+
+        stopService(intent);
+        this.finish();
+
+    }
+
+    public boolean firstTimeCheck(){
+        boolean result = false;
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        result = prefs.getBoolean("first_time", true);
+        if (result == true){
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putBoolean("first_time", false);
+            editor.commit();
+        }
+        return result;
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -65,66 +231,8 @@ public class MainActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
-    public void startTracking(View view){
-        Intent intent = new Intent(this, TrackingActivity.class);
-        startActivity(intent);
-    }
-
-    public void uploadFiles(View view){
-
-        String[] paths;
-        ConnectivityManager connMgr = (ConnectivityManager)
-                getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        boolean wifiOnly = prefs.getBoolean("wifi_upload", true);
-        boolean allowUpload = false;
-        boolean wifiActive = connMgr.getNetworkInfo(ConnectivityManager.TYPE_WIFI).isConnected();
-        String message = "No internet connection detected. Please check network connectivity";
-
-        if(networkInfo != null && networkInfo.isConnected()){
-            if ((wifiOnly && wifiActive) || (!wifiOnly))
-                allowUpload = true;
-            else
-                message = "No wifi connection detected. Please enable wifi or change setting to upload using cell phone network";
-        }
-
-        if (!allowUpload){
-            AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
-            alertDialogBuilder.setTitle("Not connected to the internet")
-                    .setMessage(message)
-                    .setCancelable(true)
-                    .setNeutralButton("OK", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int i) {
-                            dialogInterface.cancel();
-                        }
-                    });
-
-            AlertDialog alertDialog = alertDialogBuilder.create();
-            alertDialog.show();
-        }
 
 
-
-        if (allowUpload) {
-
-            try {
-                File root = Environment.getExternalStorageDirectory();
-                File outDir = new File(root.getAbsolutePath() + File.separator + "Traffic_tracker");
-                paths = outDir.list();
-
-
-                AsyncTaskRunner asyncTaskRunner = new AsyncTaskRunner();
-                asyncTaskRunner.execute(paths);
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-    }
 
     private boolean isMyServiceRunning(Class<?> serviceClass) {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
@@ -136,97 +244,9 @@ public class MainActivity extends AppCompatActivity {
         return false;
     }
 
-    private class AsyncTaskRunner extends AsyncTask<String, String, String> {
-        private static final String TAG = "UPLOAD_TASK";
-        boolean DEBUG = false;
-
-        @Override
-        protected String doInBackground(String... params) {
-            //String url_string = "http://134.88.13.215:8000/uploadToServer.php";
-            String url_string = "http://134.88.13.215:8000/uploadToServer.py";
-            //String url_string = "http://10.0.2.2:8000/cgi-bin/uploadToServer.py";
-
-            int bytesRead, bytesAvailable, bufferSize;
-            byte[] buffer;
-            int maxBufferSize = 1 * 1024 * 1024;
-            DataOutputStream dos = null;
-            String lineEnd = "\r\n";
-            String twoHyphens = "--";
-            String boundary = "*****";
-            if(DEBUG)Log.e(TAG, "doInBackground ");
-
-            for(String path:params) {
-                try {
-                    //path = path;
-                    Log.i("uploadFile", "Uploading File : " + path);
-                    File root = Environment.getExternalStorageDirectory();
-
-                    File outDir = new File(root.getAbsolutePath() + File.separator + "Traffic_tracker");
-                    //File outputFile = new File(outDir, "temp_gps.csv");
-                    File outputFile = new File(outDir, path);
-                    FileInputStream fileInputStream = new FileInputStream(outputFile);
-
-                    URL url = new URL(url_string);
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setDoInput(true); // Allow Inputs
-                    conn.setDoOutput(true); // Allow Outputs
-                    conn.setUseCaches(false); // Don't use a Cached Copy
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Connection", "Keep-Alive");
-                    conn.setRequestProperty("ENCTYPE", "multipart/form-data");
-                    conn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
-                    conn.setRequestProperty("uploaded_file", outputFile.toString());
-
-                    dos = new DataOutputStream(conn.getOutputStream());
-
-                    dos.writeBytes(twoHyphens + boundary + lineEnd);
-                    dos.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\";filename=\"" + outputFile.toString() + "\"" + lineEnd);
-
-                    dos.writeBytes(lineEnd);
-
-                    // create a buffer of  maximum size
-                    bytesAvailable = fileInputStream.available();
-
-                    bufferSize = Math.min(bytesAvailable, maxBufferSize);
-                    buffer = new byte[bufferSize];
-
-                    // read file and write it into form...
-                    bytesRead = fileInputStream.read(buffer, 0, bufferSize);
-
-                    while (bytesRead > 0) {
-
-                        dos.write(buffer, 0, bufferSize);
-                        bytesAvailable = fileInputStream.available();
-                        bufferSize = Math.min(bytesAvailable, maxBufferSize);
-                        bytesRead = fileInputStream.read(buffer, 0, bufferSize);
-
-                    }
-
-                    // send multipart form data necesssary after file data...
-                    dos.writeBytes(lineEnd);
-                    dos.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
-
-                    int serverResponseCode = conn.getResponseCode();
-                    String serverResponseMessage = conn.getResponseMessage();
-
-                    Log.i("uploadFile", "HTTP Response is : "
-                            + serverResponseMessage + ": " + serverResponseCode);
-                    fileInputStream.close();
-                    dos.flush();
-                    dos.close();
-                    if (serverResponseCode == 200){
-                        Log.i("uploadFile", "Upload successful, Deleting File : " + path);
-                        outputFile.delete();
-                    }
 
 
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-            return null;
-        }
-    }
+
 
 }
 

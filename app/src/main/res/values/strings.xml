@@ -1,6 +1,5 @@
 <resources>
     <string name="app_name">Traffic Tracker</string>
-    <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
 
 <!-- TODO: Remove or change this placeholder text -->

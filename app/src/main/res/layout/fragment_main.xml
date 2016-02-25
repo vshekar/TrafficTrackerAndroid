@@ -14,32 +14,24 @@
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true" />
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Start Tracking"
-        android:id="@+id/button"
-        android:layout_below="@+id/textView"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="128dp"
-        android:onClick="startTracking"/>
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Upload Data"
-        android:id="@+id/button2"
-        android:layout_below="@+id/button"
+        android:text="Exit App"
+        android:id="@+id/button"
+        android:layout_below="@+id/textView"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="59dp"
-        android:onClick="uploadFiles"/>
+        android:layout_marginTop="128dp"
+        android:onClick="exitApp"/>
+
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Settings"
         android:id="@+id/button3"
-        android:layout_below="@+id/button2"
+        android:layout_below="@+id/button"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="50dp"
         android:onClick="openSettings"/>

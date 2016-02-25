@@ -7,8 +7,9 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.location.Location;
 import android.location.LocationManager;
+
 import android.os.Bundle;
-import android.os.Environment;
+
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 
@@ -17,18 +18,20 @@ import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.Geofence;
+
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
 import java.io.BufferedWriter;
+
 import java.io.File;
+
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+
 import java.io.Writer;
-import java.security.GeneralSecurityException;
+
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -36,15 +39,8 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 import java.util.TimeZone;
+import android.os.Handler;
 
-import static edu.umassd.traffictracker.AesCbcWithIntegrity.decryptString;
-import static edu.umassd.traffictracker.AesCbcWithIntegrity.encrypt;
-import static edu.umassd.traffictracker.AesCbcWithIntegrity.generateKey;
-import static edu.umassd.traffictracker.AesCbcWithIntegrity.generateKeyFromPassword;
-import static edu.umassd.traffictracker.AesCbcWithIntegrity.generateSalt;
-import static edu.umassd.traffictracker.AesCbcWithIntegrity.keyString;
-import static edu.umassd.traffictracker.AesCbcWithIntegrity.keys;
-import static edu.umassd.traffictracker.AesCbcWithIntegrity.saltString;
 
 
 /**
@@ -54,94 +50,93 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
     private static final String TAG = "GPS_SERVICE";
     boolean DEBUG = false;
     private LocationManager mLocationManager = null;
-    private static final int LOCATION_INTERVAL = 1000;
-    private static final float LOCATION_DISTANCE = 0f;
     private String filename;
     private GoogleApiClient mGoogleApiClient;
     private LocationRequest mLocationRequest;
     private boolean playService = true;
-    private Intent thisintent;
     private Location mLastLocation;
-    private Geofence mGeofence;
+    private Writer writer;
+    final Handler handler = new Handler();
+    private int TOTAL_POINTS = 1000;
+    private int current_points = 0;
 
 
 
-    private class LocationListener implements android.location.LocationListener{
-        Location mLastLocation;
-        private Writer writer;
-        public LocationListener(String provider){
-            if(DEBUG)Log.e(TAG, "LocationListener " + provider);
-            mLastLocation = new Location(provider);
+
+    public void createNewFile(){
+        //Naming the file (Random integer 0< n < 1000 + current UTC time)
+        if(DEBUG)Log.e(TAG, "Creating New file");
+        File root = getFilesDir();
+        File inDir = new File(root.getAbsolutePath() + File.separator + "Traffic_tracker");
+        File outDir = new File(root.getAbsolutePath() + File.separator + "Traffic_tracker"+ File.separator + "uploads");
+        if (!outDir.exists()){
+            outDir.mkdirs();
+        }
+        String[] paths;
+        paths = inDir.list();
+        for(int i=0;i<paths.length;i++){
+            Log.e(TAG,"Moving file paths: "+ paths[i]);
+            File from = new File(inDir, paths[i]);
+            File to = new File(outDir, paths[i]);
+            from.renameTo(to);
         }
 
-        @Override
-        public void onLocationChanged(Location location){
-            if(DEBUG)Log.e(TAG, "onLocationChanged: " + location);
-            mLastLocation.set(location);
-            double lat = mLastLocation.getLatitude();
-            double lng = mLastLocation.getLongitude();
-            final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-            final String utcTime = sdf.format(new Date());
-            String op = utcTime + "," + Double.toString(lat) + "," + Double.toString(lng) + "\n";
-            writeToFile(filename,op);
-        }
+        Random rand = new Random();
+        int n = rand.nextInt(1000);
+        filename = Integer.toString(n);
+        SimpleDateFormat sdf = new SimpleDateFormat("MM-dd-yyyy-HH-mm-ss");
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+        String utcTime = sdf.format(new Date());
+        filename = filename +"-"+ utcTime + ".csv";
 
-        public void writeToFile(String filename, String data){
-            File root = Environment.getExternalStorageDirectory();
+        //Adding first line to the file
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        String line = "Age:";
+        line += prefs.getString("age_preference", "0");
+        line += ",Race:";
+        String text = "0";
+        Set<String> set = new HashSet<String>(Arrays.asList(text.split(" +")));
+        line += prefs.getStringSet("race_preference", set).toString();
+        line += ",Gender:";
+        line += prefs.getString("gender_preference", "0");
+        line += ",Occupation:";
+        line += prefs.getString("occupation_preference", "0");
 
-            File outDir = new File(root.getAbsolutePath() + File.separator + "Traffic_tracker");
-
-            if (!outDir.exists()){
-                outDir.mkdirs();
-            }
-            try {
-                if (!outDir.isDirectory()) {
-                    throw new IOException(
-                            "Unable to create directory EZ_time_tracker. Maybe the SD card is mounted?");
-                }
-                File outputFile = new File(outDir, filename);
-                writer = new BufferedWriter(new FileWriter(outputFile, true));
-                writer.write(data);
-
-                writer.close();
-            } catch (IOException e) {
-                if(DEBUG)Log.w("eztt", e.getMessage(), e);
-                Context context = getApplicationContext();
-                Toast.makeText(context, e.getMessage() + " Unable to write to external storage.",
-                        Toast.LENGTH_LONG).show();
-            }
-
-        }
-
-        @Override
-        public void onProviderDisabled(String provider){
-            if(DEBUG)Log.e(TAG, "onProviderDisabled: " + provider);
-        }
-
-        @Override
-        public void onProviderEnabled(String provider)
-        {
-            if(DEBUG)Log.e(TAG, "onProviderEnabled: " + provider);
-        }
-
-        @Override
-        public void onStatusChanged(String provider, int status, Bundle extras)
-        {
-            if(DEBUG)Log.e(TAG, "onStatusChanged: " + provider);
-        }
+        writeToFile(filename,line+"\n");
     }
 
-    LocationListener[] mLocationListeners = new LocationListener[] {
-            new LocationListener(LocationManager.GPS_PROVIDER),
-            new LocationListener(LocationManager.NETWORK_PROVIDER)
-    };
+    public void writeToFile(String filename, String data){
+        if(DEBUG)Log.e(TAG, "Writing to file");
+        //File root = Environment.getExternalStorageDirectory();
+        File root = getFilesDir();
+        File outDir = new File(root.getAbsolutePath() + File.separator + "Traffic_tracker");
 
+        if (!outDir.exists()){
+            outDir.mkdirs();
+        }
+        try {
+            if (!outDir.isDirectory()) {
+                throw new IOException(
+                        "Unable to create directory EZ_time_tracker. Maybe the SD card is mounted?");
+            }
+            File outputFile = new File(outDir, filename);
+            writer = new BufferedWriter(new FileWriter(outputFile, true));
+            writer.write(data);
+
+            writer.close();
+        } catch (IOException e) {
+            if(DEBUG)Log.w("eztt", e.getMessage(), e);
+            Context context = getApplicationContext();
+            Toast.makeText(context, e.getMessage() + " Unable to write to external storage.",
+                    Toast.LENGTH_LONG).show();
+        }
+
+    }
 
 
     @Override
      public void onConnectionFailed(ConnectionResult result) {
-        if(DEBUG)Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = "
+        if (DEBUG) Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = "
                 + result.getErrorCode());
     }
 
@@ -172,13 +167,11 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
     {
         if(DEBUG)Log.e(TAG, "onStartCommand");
         super.onStartCommand(intent, flags, startId);
-        thisintent= intent;
-        if (intent!= null) {
-            playService = intent.getBooleanExtra("playService", false);
-        }
         initializeLocationManager();
-
         startTracking();
+        //timer.schedule(task,0,600000);
+
+
 
         return START_STICKY;
     }
@@ -189,54 +182,15 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
     }
 
     public void startTracking(){
-        //Naming the file (Random integer 0< n < 1000 + current UTC time)
-        Random rand = new Random();
-        int n = rand.nextInt(1000);
-        filename = Integer.toString(n);
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
-        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-        String utcTime = sdf.format(new Date());
-        filename = filename +"-"+ utcTime + ".csv";
 
-        if(playService)
-        {
+        createNewFile();
+        mGoogleApiClient.connect();
+        mLocationRequest = new LocationRequest();
+        mLocationRequest.setInterval(1000);
+        mLocationRequest.setFastestInterval(500);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
 
-            //if (mGoogleApiClient != null) {
-            mGoogleApiClient.connect();
-            //}
-            mLocationRequest = new LocationRequest();
-            mLocationRequest.setInterval(1000);
-            mLocationRequest.setFastestInterval(500);
-            mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-
-        }
-        else {
-            try {
-                mLocationManager.requestLocationUpdates(
-                        LocationManager.GPS_PROVIDER, LOCATION_INTERVAL, LOCATION_DISTANCE,
-                        mLocationListeners[0]);
-            } catch (java.lang.SecurityException ex) {
-                if(DEBUG) Log.i(TAG, "fail to request location update, ignore", ex);
-            } catch (IllegalArgumentException ex) {
-                if(DEBUG)Log.d(TAG, "gps provider does not exist " + ex.getMessage());
-            }
-        }
-        //Adding first line to the file
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String line = "Age:";
-        line += prefs.getString("age_preference", "0");
-        line += ",Race:";
-        String text = "0";
-        Set<String> set = new HashSet<String>(Arrays.asList(text.split(" +")));
-        line += prefs.getStringSet("race_preference", set).toString();
-        line += ",Gender:";
-        line += prefs.getString("gender_preference", "0");
-        line += ",Occupation:";
-        line += prefs.getString("occupation_preference", "0");
-        //line += "\n";
-        //line = encryptString(line);
-        mLocationListeners[0].writeToFile(filename,line+"\n");
     }
 
     @Override
@@ -263,32 +217,26 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
             //sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
             //final String utcTime = sdf.format(new Date());
             long utcTime = mLastLocation.getTime();
-            //Get current speed of the phone
-            double speed = mLastLocation.getSpeed();
-            String op = Long.toString(utcTime) + "," + Double.toString(lat) + "," + Double.toString(lng)+ "," + Double.toString(speed)+ "," + Double.toString(mLastLocation.getAccuracy()) + "\n" ;
+
+            String op = Long.toString(utcTime) + "," + Double.toString(lat) + "," + Double.toString(lng)+ "," + Double.toString(mLastLocation.getAccuracy()) + "\n" ;
             //op = encryptString(op);
-            mLocationListeners[1].writeToFile(filename, op);
+            writeToFile(filename, op);
+            if(current_points < TOTAL_POINTS){
+                if(DEBUG)Log.e(TAG, "Current Points = " + Integer.toString(current_points));
+                current_points++;
+            }
+            else{
+                if(DEBUG)Log.e(TAG, "Reached max points creating new file and uploading ");
+                current_points = 0;
+                //new uploadData().execute();
+
+                createNewFile();
+            }
+
         }
     }
 
-    private String encryptString(String data){
-        String keyStr = "";
-        try {
-            AesCbcWithIntegrity.SecretKeys key;
-            String salt = saltString(generateSalt());
-            if(DEBUG)Log.i(TAG, "Salt: " + salt);
-            key = generateKeyFromPassword("3ncryptGPS", salt);
-            keyStr = keyString(key);
-            //key = keys(keyStr);
-            AesCbcWithIntegrity.CipherTextIvMac civ = encrypt(data, key);
-            data = civ.toString();
-        }catch (GeneralSecurityException e) {
-            Log.e(TAG, "GeneralSecurityException", e);
-        } catch (UnsupportedEncodingException e) {
-            Log.e(TAG, "UnsupportedEncodingException", e);
-        }
-        return keyStr +" ----- "+data + "\n";
-    }
+
 
     @Override
     public void onDestroy() {
@@ -298,15 +246,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
             LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
         }
 
-        if (mLocationManager != null) {
-            for (int i = 0; i < mLocationListeners.length; i++) {
-                try {
-                    mLocationManager.removeUpdates(mLocationListeners[i]);
-                } catch (Exception ex) {
-                    Log.i(TAG, "fail to remove location listeners, ignore", ex);
-                }
-            }
-        }
+
     }
 
     @Override
@@ -323,6 +263,8 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
             mLocationManager = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
         }
     }
+
+
 
 
 }
