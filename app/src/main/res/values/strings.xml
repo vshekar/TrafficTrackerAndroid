@@ -5,5 +5,49 @@
 <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="title_activity_tracking">Tracking</string>
+    <string name="irb">IRB#16.018 Start date: 2/23/16  End date: 2/22/17\n
+<b>Informed Consent to Participate in Research</b>\n
+<b>The University of Massachusetts Dartmouth</b>\n
 
+\n\nYou are being asked to participate in a research study.  This form provides you with information about the study. The Principal Investigator (the person in charge of this research) or his/her representative will provide you with a copy of this form to keep for your reference, and will also describe this study to you and answer all of your questions. Please read the information below and ask questions about anything you don’t understand before deciding whether or not to take part. Your participation is entirely voluntary and you can refuse to participate without penalty or loss of benefits to which you are otherwise entitled.
+\n
+Title of Research Study: Studying traffic patterns on the UMass Dartmouth campus
+\n
+Principal Investigator(s) (include faculty sponsor), UMD affiliation, and Telephone Number(s): Lance Fiondella, Ph.D.
+\n
+Funding source: This research is supported by the United States Department of Homeland Security (DHS) through the National Center for Risk and Economic Analysis of Terrorism Events (CREATE) at the University of Southern California (USC) under award number 2010-ST-061-RE0001.
+\n\n
+<b>What is the purpose of this study?</b> \n The goal of this study is to study the traffic patterns on the UMass Dartmouth campus. Dozens to hundreds of UMassD students and faculty members will be asked to install a phone application on their Android/iOS smartphones. The smartphone app will collect location data also known as GPS (Global Positioning System) data. No PII (Personally Identifiable Information) will be collected. Data collected will be anonymous and encrypted. A series of the participant’s location information will be collected to study the behavior of traffic within the UMassD campus.
+\n\n
+<b>What will be done if you take part in this research study?</b> \n Participants possessing an Android or iPhone will visit the Play store or the App store respectively to download and install the application which will collect GPS data. They can optionally answer a questionnaire which collects demographic data.
+\n\n
+<b>The Project Duration is:</b> \nThe duration of the project is from 2/23/16 to 2/22/17.
+\n\n
+<b>What are the possible discomforts and risks?</b>\n The application may consume more power and require that the users phone be charged more frequently. Tracking individuals in transit may be possible, but industry standard encryption has been incorporated to mitigate inappropriate use of data in transit such as stalking or harassment.
+\n\n
+<b>What are the possible benefits to you or to others?</b>\n  No benefit exists at this time.
+\n\n
+<b>If you choose to take part in this study, will it cost you anything?</b>\n  There is no cost to take part in this study.
+\n\n
+<b>Will you receive compensation for your participation in this study?</b>\n  No compensation will be provided for participation in the study.
+\n\n
+<b>What if you are injured because of the study?</b>\n  Physical risk is no greater than using any other smartphone application. If injuries occur as a result of study activity, eligible University students may be treated at the usual level of care with the usual cost for services at the Student Health Center, but the University has no policy to provide payment in the event of a medical problem.
+\n\n
+<b>If you do not want to take part in this study, what other options are available to you?</b>\n Participation in this study is entirely voluntary. Individuals are free to refuse to participate in the study, and refusal will not influence current or future relationships with The University of Massachusetts Dartmouth.
+\n\n
+<b>How can you withdraw from this research study and who should you call if you have questions?</b>\n There are no anticipated circumstances under which the participant’s participation will be terminated by the investigator. There are no adverse consequences of a participant’s decision to withdraw from the research. To withdraw from the research study a participant can simply remove the application from their smartphones at any time.
+\n\n
+<b>If you wish to stop your participation in this research study for any reason, you should contact the principal investigator: Lance Fiondella at (508) 999-8596.</b>\n   You should also call the principal investigator for any questions, concerns, or complaints about the research.  You are free to withdraw your consent and stop participation in this research study at any time without penalty or loss of benefits for which you may be entitled. Throughout the study, the researchers will notify you of new information that may become available and that might affect your decision to remain in the study.
+\n
+In addition, if you have questions about your rights as a research participant, or if you have complaints, concerns, or questions about the research, please contact Professors Cathy Neto, Ph.D., or Frank Scarano, Ph.D., Co-Chairs, The University of Massachusetts Dartmouth Institutional Review Board for the Protection of Human Subjects at (508) 910-6928 or (508) 999-9239, or the Office of Institutional Compliance at (508) 910-9880.
+\n\n
+<b>How will your privacy and the confidentiality of your research records be protected?</b>\n The GPS data collected from the participant will be collected in distinct ‘sessions’, where a session is a defined as a predefined amount of time for which the smartphone app collects data. In addition to GPS data, the session will also include demographic data voluntarily provided by the participant. Each session is independent of others. In other words, the researchers cannot identify whether two sessions came from the same participant even if very similar paths were taken on separate occasions. As the number of participants increases, privacy through anonymity will improve.  The application also contains a ‘geo-fence’ which allows the application to collect GPS data within a circle of 1 km (0.62 miles) from the center of the UMassD campus (Latitude: 41.628931 Longitude :-71.006228). If the participant moves outside this virtual fence, the application stops collecting GPS information, thus protecting the privacy of the participant outside the UMassD campus. This data will reside on a password protected server in Dion 316. Only the PI and students involved in the study will have access to the data. The server will reside behind the UMassD firewall.
+\n\n
+If in the unlikely event it becomes necessary for the Institutional Review Board to review your research records, then The University of Massachusetts Dartmouth will protect the confidentiality of those records to the extent permitted by law.  Your research records will not be released without your consent unless required by law or a court order. The data resulting from your participation may be made available to other researchers in the future for research purposes not detailed within this consent form. In these cases, the data will contain no identifying information that could associate you with it, or with your participation in any study.
+\n
+If the results of this research are published or presented at scientific meetings, your identity will not be disclosed.
+\n\n
+<b>Will the researchers benefit from your participation in this study?</b>\n Potential benefits beyond publishing or presenting the results include preliminary results and analysis that can be included in applications for federal funding such as the National Science Foundation and Department of Transportation to strengthen the chances of success.
+
+</string>
 </resources>

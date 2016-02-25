@@ -42,14 +42,14 @@ import java.util.TimerTask;
 
 
 
-public class GeofenceTransitionsIntentService extends IntentService {
+public class GeofenceTransitionsIntentService extends Service {
     String TAG = "Geofence Transition Service";
     boolean DEBUG = true;
     boolean serviceStarted = false;
     public static Intent trackingServiceIntent;
     private final IBinder mBinder = new LocalBinder();
     public GeofenceTransitionsIntentService() {
-        super("GeofenceTransitionsIntentService");
+        super();
     }
 
     private Intent trackingActivityIntent;
@@ -89,7 +89,7 @@ public class GeofenceTransitionsIntentService extends IntentService {
         return mBinder;
     }
 
-    @Override
+
     protected void onHandleIntent(Intent intent) {
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
         if (geofencingEvent.hasError()) {
@@ -147,7 +147,7 @@ public class GeofenceTransitionsIntentService extends IntentService {
         setupForeground();
 
         //monitorWifi();
-        //handleIntent(intent);
+        onHandleIntent(intent);
 
         return START_STICKY;
     }
@@ -165,7 +165,7 @@ public class GeofenceTransitionsIntentService extends IntentService {
         mNotifyBuilder = new NotificationCompat.Builder(this)
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle("Traffic Tracker")
-                .setContentText("Outside UMass Dartmouth Campus")
+                .setContentText("Outside UMass: Not tracking")
                 .setContentIntent(trackingActivityPendingIntent)
                 .setAutoCancel(true);
         startForeground(mNotificationId,mNotifyBuilder.build());
@@ -222,10 +222,7 @@ public class GeofenceTransitionsIntentService extends IntentService {
                 paths = outDir.list();
                 Log.e("UPLOAD_TASK : ",root.getAbsolutePath() + File.separator + "Traffic_tracker"+ File.separator + "uploads");
                 String[] finalPaths;
-                for(int i=0;i<paths.length;i++){
-                    Log.e("UPLOAD_TASK paths: ", paths[i]);
 
-                }
 
                 if(paths.length != 0 && paths != null) {
                     uploadData asyncTaskRunner = new uploadData();

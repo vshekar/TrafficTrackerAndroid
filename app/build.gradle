@@ -8,8 +8,8 @@ android {
         applicationId "edu.umassd.traffictracker"
         minSdkVersion 15
         targetSdkVersion 22
-        versionCode 3
-        versionName "1.02"
+        versionCode 4
+        versionName "1.03"
     }
     buildTypes {
         release {

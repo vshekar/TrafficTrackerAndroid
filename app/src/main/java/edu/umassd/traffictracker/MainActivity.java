@@ -1,7 +1,9 @@
 package edu.umassd.traffictracker;
 
+import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
@@ -18,6 +20,7 @@ import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.Html;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -43,9 +46,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     public GeofenceTransitionsIntentService mService;
     public LocationManager locationManager;
     String TAG = "MainActivity";
-    boolean DEBUG = false;
+    boolean DEBUG = true;
     boolean geofenceRunning = false;
     public Intent intent;
+    final Context c = this;
 
     public ServiceConnection mConnection = new ServiceConnection() {
 
@@ -79,22 +83,27 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
         else if (ftc){
             //If app is started for the first time, show settings
-            //TODO: Add IRB approval form
-            Intent i = new Intent(this, Settings.class);
-            startActivity(i);
+
+            showIRB();
+
+
         }
         else {
             if(DEBUG)Log.e(TAG, "geofencetransition is not running");
-            //geofencetransition is not running, start it here
-            setContentView(R.layout.activity_main);
-            buildGeofence();
-            intent = new Intent(this, GeofenceTransitionsIntentService.class);
-            startService(intent);
-            connectGoogleApiClient(intent);
-            //Bind the geofenceTransition service to access its methods
-            bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
-            checkGPS();
+            initialize();
         }
+    }
+
+    public void initialize(){
+        //geofencetransition is not running, start it here
+        setContentView(R.layout.activity_main);
+        buildGeofence();
+        intent = new Intent(this, GeofenceTransitionsIntentService.class);
+        startService(intent);
+        connectGoogleApiClient(intent);
+        //Bind the geofenceTransition service to access its methods
+        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+        checkGPS();
     }
 
     @Override
@@ -186,22 +195,85 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     public void exitApp(View view){
         //Triggered when user clicks "Exit App"
+        String title = "Exit";
+        String message = "Are you sure you want to exit?\nYou will stop collecting data if you do";
+        AlertDialog.Builder builder = new AlertDialog.Builder(c)
+                .setTitle(title)
+                .setMessage(message)
+                .setCancelable(false)
+                .setPositiveButton("Exit",
+                        new Dialog.OnClickListener(){
+                            @Override
+                            public void onClick(
+                                    DialogInterface dialogInterface, int i){
+                                stopService(intent);
+                                MainActivity.this.finish();
+                            }
+                        })
+                .setNegativeButton(android.R.string.cancel,
+                        new Dialog.OnClickListener() {
+                            @Override
+                            public void onClick(
+                                    DialogInterface dialog, int i) {
+                                dialog.dismiss();
+                            }
+                        });
+        AlertDialog alertDialog = builder.create();
 
-        stopService(intent);
-        this.finish();
+        // show it
+        alertDialog.show();
+
+
 
     }
 
     public boolean firstTimeCheck(){
-        boolean result = false;
+        boolean result,irb;
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         result = prefs.getBoolean("first_time", true);
-        if (result == true){
-            SharedPreferences.Editor editor = prefs.edit();
-            editor.putBoolean("first_time", false);
-            editor.commit();
-        }
-        return result;
+        irb = prefs.getBoolean("irbAccepted",false);
+        return result&&!irb;
+    }
+
+    public void showIRB(){
+        String title = "IRB Approval form";
+        String message = this.getString(R.string.irb);
+        final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean irbAccepted = prefs.getBoolean("irbAccepted", false);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(c)
+                .setTitle(title)
+                .setMessage(message)
+                .setCancelable(false)
+                .setPositiveButton(R.string.accept,
+                        new Dialog.OnClickListener() {
+                            @Override
+                            public void onClick(
+                                    DialogInterface dialogInterface, int i) {
+                                SharedPreferences.Editor editor = prefs.edit();
+                                editor.putBoolean("irbAccepted", true);
+                                editor.putBoolean("first_time", false);
+                                editor.commit();
+                                dialogInterface.dismiss();
+                                initialize();
+                                Intent intent = new Intent(c, Settings.class);
+                                startActivity(intent);
+
+
+                            }
+                        })
+                .setNegativeButton(android.R.string.cancel,
+                        new Dialog.OnClickListener() {
+                            @Override
+                            public void onClick(
+                                    DialogInterface dialog, int i) {
+                                MainActivity.this.finish();
+                            }
+                        });
+        AlertDialog alertDialog = builder.create();
+
+        // show it
+        alertDialog.show();
     }
 
     @Override
