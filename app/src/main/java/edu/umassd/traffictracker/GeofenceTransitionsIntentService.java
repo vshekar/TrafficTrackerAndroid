@@ -220,7 +220,7 @@ public class GeofenceTransitionsIntentService extends Service {
                 File root = getFilesDir();
                 File outDir = new File(root.getAbsolutePath() + File.separator + "Traffic_tracker"+ File.separator + "uploads");
                 paths = outDir.list();
-                Log.e("UPLOAD_TASK : ",root.getAbsolutePath() + File.separator + "Traffic_tracker"+ File.separator + "uploads");
+                Log.e("UPLOAD_TASK : ",paths[0]);
                 String[] finalPaths;
 
 

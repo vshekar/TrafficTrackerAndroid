@@ -74,7 +74,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
         }
         String[] paths;
         paths = inDir.list();
-        for(int i=0;i<paths.length;i++){
+        for(int i=1;i<paths.length;i++){
             Log.e(TAG,"Moving file paths: "+ paths[i]);
             File from = new File(inDir, paths[i]);
             File to = new File(outDir, paths[i]);
@@ -91,16 +91,16 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
 
         //Adding first line to the file
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String line = "Age:";
-        line += prefs.getString("age_preference", "0");
-        line += ",Race:";
+        String line = "\"Age\":";
+        line += "\"" + prefs.getString("age_preference", "0") + "\"";
+        line += ",\"Race\":";
         String text = "0";
         Set<String> set = new HashSet<String>(Arrays.asList(text.split(" +")));
-        line += prefs.getStringSet("race_preference", set).toString();
-        line += ",Gender:";
-        line += prefs.getString("gender_preference", "0");
-        line += ",Occupation:";
-        line += prefs.getString("occupation_preference", "0");
+        line += "\"" + prefs.getStringSet("race_preference", set).toString() + "\"";
+        line += ",\"Gender\":";
+        line += "\""+ prefs.getString("gender_preference", "0") + "\"";
+        line += ",\"Occupation\":";
+        line += "\""+prefs.getString("occupation_preference", "0")+ "\"";
 
         writeToFile(filename,line+"\n");
     }

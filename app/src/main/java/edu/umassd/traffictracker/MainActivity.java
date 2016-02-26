@@ -102,20 +102,19 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         startService(intent);
         connectGoogleApiClient(intent);
         //Bind the geofenceTransition service to access its methods
-        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+        if (!mBound)
+            bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
         checkGPS();
     }
 
+    /*
     @Override
     protected void onDestroy(){
         if(DEBUG)Log.e(TAG, "OnDestroy");
         super.onDestroy();
-        if(mBound) {
-            unbindService(mConnection);
-            mBound = false;
-        }
-    }
 
+    }
+*/
     @Override
     public void onConnected(Bundle arg0) {
         // Once connected with google api, Add the geofence
@@ -207,7 +206,11 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                             public void onClick(
                                     DialogInterface dialogInterface, int i){
                                 stopService(intent);
-                                MainActivity.this.finish();
+                                if(mBound) {
+                                    unbindService(mConnection);
+                                    mBound = false;
+                                }
+                                finish();
                             }
                         })
                 .setNegativeButton(android.R.string.cancel,
@@ -235,7 +238,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         return result&&!irb;
     }
 
-    public void showIRB(){
+    public void showIRB() {
         String title = "IRB Approval form";
         String message = this.getString(R.string.irb);
         final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
