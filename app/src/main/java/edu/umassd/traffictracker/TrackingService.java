@@ -48,7 +48,7 @@ import android.os.Handler;
  */
 public class TrackingService extends Service implements GoogleApiClient.ConnectionCallbacks,GoogleApiClient.OnConnectionFailedListener, LocationListener {
     private static final String TAG = "GPS_SERVICE";
-    boolean DEBUG = true;
+    boolean DEBUG = false;
     private LocationManager mLocationManager = null;
     private String filename;
     private GoogleApiClient mGoogleApiClient;
@@ -75,7 +75,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
         String[] paths;
         paths = inDir.list();
         for(int i=1;i<paths.length;i++){
-            Log.e(TAG,"Moving file paths: "+ paths[i]);
+            if(DEBUG)Log.e(TAG,"Moving file paths: "+ paths[i]);
             File from = new File(inDir, paths[i]);
             File to = new File(outDir, paths[i]);
             from.renameTo(to);
@@ -189,7 +189,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
         mLocationRequest.setInterval(1000);
         mLocationRequest.setFastestInterval(500);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-
+        mLocationRequest.setSmallestDisplacement(2);
 
     }
 

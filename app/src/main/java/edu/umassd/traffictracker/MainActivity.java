@@ -1,6 +1,5 @@
 package edu.umassd.traffictracker;
 
-import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -12,20 +11,15 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.location.LocationManager;
-import android.net.ConnectivityManager;
-
-import android.os.AsyncTask;
-import android.os.Environment;
+import android.net.Uri;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.text.Html;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -46,10 +40,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     public GeofenceTransitionsIntentService mService;
     public LocationManager locationManager;
     String TAG = "MainActivity";
-    boolean DEBUG = true;
+    boolean DEBUG = false;
     boolean geofenceRunning = false;
     public Intent intent;
     final Context c = this;
+    public static Context context;
+
 
     public ServiceConnection mConnection = new ServiceConnection() {
 
@@ -74,11 +70,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         if(DEBUG)Log.e(TAG, "OnCreate");
         super.onCreate(savedInstanceState);
         boolean ftc = firstTimeCheck();
+        MainActivity.context = getApplicationContext();
 
         if (isMyServiceRunning(GeofenceTransitionsIntentService.class) && !ftc){
             //If the geofencetransition is running already show status
             if(DEBUG)Log.e(TAG, "geofencetransition IS running!");
             intent = new Intent(this, GeofenceTransitionsIntentService.class);
+
             setContentView(R.layout.activity_main);
         }
         else if (ftc){
@@ -107,14 +105,18 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         checkGPS();
     }
 
-    /*
+
     @Override
     protected void onDestroy(){
         if(DEBUG)Log.e(TAG, "OnDestroy");
+        if(mBound) {
+            unbindService(mConnection);
+            mBound = false;
+        }
         super.onDestroy();
 
     }
-*/
+
     @Override
     public void onConnected(Bundle arg0) {
         // Once connected with google api, Add the geofence
@@ -192,6 +194,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 .build();
     }
 
+    public void removeGeofence(){
+        if(DEBUG)Log.e(TAG,"Removing geofence");
+        mGeofencePendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        LocationServices.GeofencingApi.removeGeofences(
+                mGoogleApiClient,
+                // This is the same pending intent that was used in addGeofences().
+                mGeofencePendingIntent
+        ).setResultCallback(this); // Result processed in onResult().
+    }
+
     public void exitApp(View view){
         //Triggered when user clicks "Exit App"
         String title = "Exit";
@@ -210,7 +222,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                                     unbindService(mConnection);
                                     mBound = false;
                                 }
-                                finish();
+                                removeGeofence();
+                                finishAffinity();
+                                return;
                             }
                         })
                 .setNegativeButton(android.R.string.cancel,
@@ -230,6 +244,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     }
 
+
+
+
     public boolean firstTimeCheck(){
         boolean result,irb;
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -248,7 +265,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 .setTitle(title)
                 .setMessage(message)
                 .setCancelable(false)
-                .setPositiveButton(R.string.accept,
+                .setPositiveButton("Accept",
                         new Dialog.OnClickListener() {
                             @Override
                             public void onClick(
@@ -306,7 +323,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         startActivity(intent);
     }
 
-
+    public void sendFeedback(View view) {
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        Uri data = Uri.parse("mailto:vshekar@umassd.edu?subject=Traffic App Feedback&body=");
+        intent.setData(data);
+        startActivity(intent);
+    }
 
 
     private boolean isMyServiceRunning(Class<?> serviceClass) {

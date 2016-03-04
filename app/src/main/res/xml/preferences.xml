@@ -27,8 +27,8 @@
         <CheckBoxPreference
             android:key="wifi_upload"
             android:title="Use Wifi Only"
-            android:summary="Check this option if you don't want the app to upload data with cellular data"
-            android:defaultValue="true"/>
+            android:summary="Check this option if you don't want the app to upload data using cellular data"
+            android:defaultValue="false"/>
 
     </PreferenceCategory>
 </PreferenceScreen>

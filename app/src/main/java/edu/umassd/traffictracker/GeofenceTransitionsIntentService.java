@@ -1,40 +1,46 @@
 package edu.umassd.traffictracker;
 
-import android.app.IntentService;
-import android.app.Notification;
+
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Binder;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
-import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingEvent;
 
+import java.io.BufferedInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.net.HttpURLConnection;
+import java.io.InputStream;
 import java.net.URL;
+import java.security.KeyStore;
+import java.security.SecureRandom;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.Timer;
 import java.util.TimerTask;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 
 /**
  * Created by Shekar on 12/18/2015.
@@ -44,7 +50,7 @@ import java.util.TimerTask;
 
 public class GeofenceTransitionsIntentService extends Service {
     String TAG = "Geofence Transition Service";
-    boolean DEBUG = true;
+    boolean DEBUG = false;
     boolean serviceStarted = false;
     public static Intent trackingServiceIntent;
     private final IBinder mBinder = new LocalBinder();
@@ -161,7 +167,8 @@ public class GeofenceTransitionsIntentService extends Service {
 
     public void setupForeground(){
         trackingActivityIntent = new Intent(this, MainActivity.class);
-        trackingActivityPendingIntent = PendingIntent.getActivity(this, 0, trackingActivityIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+        trackingActivityIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        trackingActivityPendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, trackingActivityIntent, PendingIntent.FLAG_CANCEL_CURRENT);
         mNotifyBuilder = new NotificationCompat.Builder(this)
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle("Traffic Tracker")
@@ -220,11 +227,12 @@ public class GeofenceTransitionsIntentService extends Service {
                 File root = getFilesDir();
                 File outDir = new File(root.getAbsolutePath() + File.separator + "Traffic_tracker"+ File.separator + "uploads");
                 paths = outDir.list();
-                Log.e("UPLOAD_TASK : ",paths[0]);
+
                 String[] finalPaths;
 
 
                 if(paths.length != 0 && paths != null) {
+                    if(DEBUG)Log.e("UPLOAD_TASK : ",paths[0]);
                     uploadData asyncTaskRunner = new uploadData();
                     asyncTaskRunner.execute(paths);
                 }
@@ -244,10 +252,67 @@ public class GeofenceTransitionsIntentService extends Service {
         private static final String TAG = "UPLOAD_TASK";
         boolean DEBUG = true;
 
+
+        public HttpsURLConnection setUpHttpsConnection(String urlString)
+        {
+            try
+            {
+                // Load CAs from an InputStream
+                // (could be from a resource or ByteArrayInputStream or ...)
+                CertificateFactory cf = CertificateFactory.getInstance("X.509");
+
+                // My CRT file that I put in the assets folder
+                // I got this file by following these steps:
+                // * Go to https://littlesvr.ca using Firefox
+                // * Click the padlock/More/Security/View Certificate/Details/Export
+                // * Saved the file as littlesvr.crt (type X.509 Certificate (PEM))
+                // The MainActivity.context is declared as:
+                // public static Context context;
+                // And initialized in MainActivity.onCreate() as:
+                // MainActivity.context = getApplicationContext();
+                InputStream caInput = new BufferedInputStream(MainActivity.context.getAssets().open("134.88.13.215.crt"));
+                Certificate ca = cf.generateCertificate(caInput);
+                System.out.println("ca=" + ((X509Certificate) ca).getSubjectDN());
+
+                // Create a KeyStore containing our trusted CAs
+                String keyStoreType = KeyStore.getDefaultType();
+                KeyStore keyStore = KeyStore.getInstance(keyStoreType);
+                keyStore.load(null, null);
+                keyStore.setCertificateEntry("ca", ca);
+
+                // Create a TrustManager that trusts the CAs in our KeyStore
+                String tmfAlgorithm = TrustManagerFactory.getDefaultAlgorithm();
+                TrustManagerFactory tmf = TrustManagerFactory.getInstance(tmfAlgorithm);
+                tmf.init(keyStore);
+
+                // Create an SSLContext that uses our TrustManager
+                SSLContext context = SSLContext.getInstance("TLS");
+                //context.init(null, tmf.getTrustManagers(), null);
+
+
+                HttpsURLConnection.setDefaultHostnameVerifier(new NullHostNameVerifier());
+
+                context.init(null, new X509TrustManager[]{new NullX509TrustManager()}, new SecureRandom());
+                HttpsURLConnection.setDefaultSSLSocketFactory(context.getSocketFactory());
+
+                // Tell the URLConnection to use a SocketFactory from our SSLContext
+                URL url = new URL(urlString);
+                HttpsURLConnection urlConnection = (HttpsURLConnection)url.openConnection();
+                urlConnection.setSSLSocketFactory(context.getSocketFactory());
+
+                return urlConnection;
+            }
+            catch (Exception ex)
+            {
+                if(DEBUG)Log.e(TAG, "Failed to establish SSL connection to server: " + ex.toString());
+                return null;
+            }
+        }
+
         @Override
         protected String doInBackground(String... params) {
             //String url_string = "http://134.88.13.215:8000/uploadToServer.php";
-            String url_string = "http://134.88.13.215:8000/uploadToServer.py";
+            String url_string = "https://134.88.13.215:8001/uploadToServer.py";
             //String url_string = "http://10.0.2.2:8000/cgi-bin/uploadToServer.py";
 
             int bytesRead, bytesAvailable, bufferSize;
@@ -262,7 +327,7 @@ public class GeofenceTransitionsIntentService extends Service {
             for(String path:params) {
                 try {
                     //path = path;
-                    Log.i("uploadFile", "Uploading File : " + path);
+                    if(DEBUG)Log.i("uploadFile", "Uploading File : " + path);
                     //File root = Environment.getExternalStorageDirectory();
                     File root = getFilesDir();
                     File outDir = new File(root.getAbsolutePath() + File.separator + "Traffic_tracker"+ File.separator + "uploads");
@@ -272,7 +337,8 @@ public class GeofenceTransitionsIntentService extends Service {
                     message = "Upload Failed";
 
                     URL url = new URL(url_string);
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    //HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    HttpsURLConnection conn = setUpHttpsConnection(url_string);
                     conn.setDoInput(true); // Allow Inputs
                     conn.setDoOutput(true); // Allow Outputs
                     conn.setUseCaches(false); // Don't use a Cached Copy
@@ -314,13 +380,13 @@ public class GeofenceTransitionsIntentService extends Service {
                     int serverResponseCode = conn.getResponseCode();
                     String serverResponseMessage = conn.getResponseMessage();
 
-                    Log.i("uploadFile", "HTTP Response is : "
+                    if(DEBUG)Log.i("uploadFile", "HTTP Response is : "
                             + serverResponseMessage + ": " + serverResponseCode);
                     fileInputStream.close();
                     dos.flush();
                     dos.close();
                     if (serverResponseCode == 200){
-                        Log.i("uploadFile", "Upload successful, Deleting File : " + path);
+                        if(DEBUG)Log.i("uploadFile", "Upload successful, Deleting File : " + path);
                         outputFile.delete();
                         message = "Upload Successful";
                     }
@@ -339,12 +405,63 @@ public class GeofenceTransitionsIntentService extends Service {
 
         @Override
         protected void onPostExecute(String message){
-            Log.i("uploadFile", "onPostExecute");
+            if(DEBUG)Log.i("uploadFile", "onPostExecute");
             Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
 
         }
 
 
+    }
+
+    public class NullHostNameVerifier implements HostnameVerifier {
+
+        @Override
+        public boolean verify(String hostname, SSLSession session) {
+            if(DEBUG)Log.i("RestUtilImpl", "Approving certificate for " + hostname);
+            return true;
+        }
+
+    }
+
+    public class NullX509TrustManager implements X509TrustManager {
+        /**
+         * Does nothing.
+         *
+         * @param chain
+         *            certificate chain
+         * @param authType
+         *            authentication type
+         */
+        @Override
+        public void checkClientTrusted(final X509Certificate[] chain,
+                                       final String authType) {
+            // Does nothing
+        }
+
+        /**
+         * Does nothing.
+         *
+         * @param chain
+         *            certificate chain
+         * @param authType
+         *            authentication type
+         */
+        @Override
+        public void checkServerTrusted(final X509Certificate[] chain,
+                                       final String authType)  {
+            // Does nothing
+        }
+
+        /**
+         * Gets a list of accepted issuers.
+         *
+         * @return empty array
+         */
+        @Override
+        public X509Certificate[] getAcceptedIssuers() {
+            return new X509Certificate[0];
+            // Does nothing
+        }
     }
 
 
