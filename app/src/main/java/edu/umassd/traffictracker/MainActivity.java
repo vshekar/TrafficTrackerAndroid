@@ -40,7 +40,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     public GeofenceTransitionsIntentService mService;
     public LocationManager locationManager;
     String TAG = "MainActivity";
-    boolean DEBUG = false;
+    boolean DEBUG = true;
     boolean geofenceRunning = false;
     public Intent intent;
     final Context c = this;

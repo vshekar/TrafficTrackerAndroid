@@ -48,7 +48,7 @@ import android.os.Handler;
  */
 public class TrackingService extends Service implements GoogleApiClient.ConnectionCallbacks,GoogleApiClient.OnConnectionFailedListener, LocationListener {
     private static final String TAG = "GPS_SERVICE";
-    boolean DEBUG = false;
+    boolean DEBUG = true;
     private LocationManager mLocationManager = null;
     private String filename;
     private GoogleApiClient mGoogleApiClient;

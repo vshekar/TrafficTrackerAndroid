@@ -50,7 +50,7 @@ import javax.net.ssl.X509TrustManager;
 
 public class GeofenceTransitionsIntentService extends Service {
     String TAG = "Geofence Transition Service";
-    boolean DEBUG = false;
+    boolean DEBUG = true;
     boolean serviceStarted = false;
     public static Intent trackingServiceIntent;
     private final IBinder mBinder = new LocalBinder();
