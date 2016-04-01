@@ -25,6 +25,7 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.Result;
 import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingRequest;
 import com.google.android.gms.location.LocationServices;
@@ -34,15 +35,17 @@ import com.google.android.gms.location.LocationServices;
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,GoogleApiClient.OnConnectionFailedListener, ResultCallback {
     public Geofence mGeofence;
     public GeofencingRequest gfEnter;
-    public PendingIntent mGeofencePendingIntent;
+    public PendingIntent mGeofencePendingIntent, activityHandlerPI;
     public GoogleApiClient mGoogleApiClient;
+
     public boolean mBound = false;
     public GeofenceTransitionsIntentService mService;
     public LocationManager locationManager;
     String TAG = "MainActivity";
     boolean DEBUG = true;
     boolean geofenceRunning = false;
-    public Intent intent;
+    public Intent intent,activityHandler;
+
     final Context c = this;
     public static Context context;
 
@@ -130,6 +133,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             ).setResultCallback(this);
             geofenceRunning = true;
         }
+        if(DEBUG)Log.e(TAG, "Starting activity detection");
+        /*Activity detection API*/
+        activityHandler = new Intent(this, ActivityHandler.class);
+        activityHandlerPI = PendingIntent.getService(this, 1, activityHandler, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates(mGoogleApiClient,5000,activityHandlerPI);
     }
 
     @Override
@@ -171,15 +180,22 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     public void connectGoogleApiClient(Intent intent){
         mGeofencePendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
         //Connecting to Google API
         mGoogleApiClient = new GoogleApiClient.Builder(this)
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
-                .addApi(LocationServices.API).build();
+                .addApi(LocationServices.API)
+                .addApi(ActivityRecognition.API).build();
         mGoogleApiClient.connect();
     }
 
     public void buildGeofence(){
+
+
+
+
+
         mGeofence = new Geofence.Builder()
                 .setRequestId("UmassDartmouth")
                 .setCircularRegion(41.628931, -71.006228, 1000)
@@ -202,6 +218,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 // This is the same pending intent that was used in addGeofences().
                 mGeofencePendingIntent
         ).setResultCallback(this); // Result processed in onResult().
+
+        ActivityRecognition.ActivityRecognitionApi.removeActivityUpdates(mGoogleApiClient,activityHandlerPI);
     }
 
     public void exitApp(View view){

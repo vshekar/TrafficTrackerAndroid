@@ -19,6 +19,7 @@ import android.widget.Toast;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 
+import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
@@ -52,6 +53,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
     private LocationManager mLocationManager = null;
     private String filename;
     private GoogleApiClient mGoogleApiClient;
+
     private LocationRequest mLocationRequest;
     private boolean playService = true;
     private Location mLastLocation;
@@ -148,6 +150,8 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
         if(DEBUG)Log.e(TAG, "Connected to API");
         LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
 
+
+
     }
 
     @Override
@@ -187,7 +191,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
         mGoogleApiClient.connect();
         mLocationRequest = new LocationRequest();
         mLocationRequest.setInterval(1000);
-        mLocationRequest.setFastestInterval(500);
+        //mLocationRequest.setFastestInterval(500);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         mLocationRequest.setSmallestDisplacement(2);
 
@@ -200,12 +204,15 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
         mGoogleApiClient = new GoogleApiClient.Builder(this)
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
-                .addApi(LocationServices.API).build();
+                .addApi(LocationServices.API)
+                .build();
+
+
     }
 
     @Override
     public void onLocationChanged(Location location){
-        if(DEBUG)Log.e(TAG, "onLocationChanged GoogleAPI: " + Double.toString(location.getSpeed()));
+
         //If the accuracy of the location reading is less than 4.0 meters
         if (location != null) {
             mLastLocation = new Location(location);
@@ -218,8 +225,11 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
             //final String utcTime = sdf.format(new Date());
             long utcTime = mLastLocation.getTime();
 
-            String op = Long.toString(utcTime) + "," + Double.toString(lat) + "," + Double.toString(lng)+ "," + Double.toString(mLastLocation.getAccuracy()) + "\n" ;
-            //op = encryptString(op);
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+
+            String op = Long.toString(utcTime) + "," + Double.toString(lat) + "," + Double.toString(lng)+ "," + Double.toString(mLastLocation.getAccuracy()) + ","+ prefs.getString("activity", "UNKNOWN") +"\n" ;
+            if(DEBUG)Log.e(TAG, "onLocationChanged GoogleAPI: " + op);
+
             writeToFile(filename, op);
             if(current_points < TOTAL_POINTS){
                 if(DEBUG)Log.e(TAG, "Current Points = " + Integer.toString(current_points));
