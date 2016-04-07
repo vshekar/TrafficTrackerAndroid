@@ -14,9 +14,11 @@ import android.location.LocationManager;
 import android.net.Uri;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
+import android.support.v4.app.FragmentActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -29,10 +31,13 @@ import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.*;
+import com.google.android.gms.maps.model.*;
 
 
 
-public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,GoogleApiClient.OnConnectionFailedListener, ResultCallback {
+
+public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,GoogleApiClient.OnConnectionFailedListener, ResultCallback, OnMapReadyCallback {
     public Geofence mGeofence;
     public GeofencingRequest gfEnter;
     public PendingIntent mGeofencePendingIntent, activityHandlerPI;
@@ -43,7 +48,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     public LocationManager locationManager;
     String TAG = "MainActivity";
     boolean DEBUG = true;
-    boolean geofenceRunning = false;
+    static boolean geofenceRunning = false;
     public Intent intent,activityHandler;
 
     final Context c = this;
@@ -65,7 +70,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         public void onServiceDisconnected(ComponentName arg0) {
             mBound = false;
         }
-    };
+        };
 
 
     @Override
@@ -74,25 +79,33 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         super.onCreate(savedInstanceState);
         boolean ftc = firstTimeCheck();
         MainActivity.context = getApplicationContext();
-
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API)
+                .addApi(ActivityRecognition.API).build();
         if (isMyServiceRunning(GeofenceTransitionsIntentService.class) && !ftc){
             //If the geofencetransition is running already show status
             if(DEBUG)Log.e(TAG, "geofencetransition IS running!");
             intent = new Intent(this, GeofenceTransitionsIntentService.class);
 
             setContentView(R.layout.activity_main);
+            mGoogleApiClient.connect();
         }
         else if (ftc){
             //If app is started for the first time, show settings
-
             showIRB();
-
-
         }
         else {
             if(DEBUG)Log.e(TAG, "geofencetransition is not running");
             initialize();
+            //Putting google map on app
+
         }
+
+        MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.map);
+        if(mapFragment != null)
+            mapFragment.getMapAsync(this);
     }
 
     public void initialize(){
@@ -106,6 +119,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         if (!mBound)
             bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
         checkGPS();
+
+
+
     }
 
 
@@ -139,6 +155,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         activityHandlerPI = PendingIntent.getService(this, 1, activityHandler, PendingIntent.FLAG_UPDATE_CURRENT);
 
         ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates(mGoogleApiClient,5000,activityHandlerPI);
+
+
+
     }
 
     @Override
@@ -182,20 +201,11 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         mGeofencePendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
         //Connecting to Google API
-        mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .addApi(LocationServices.API)
-                .addApi(ActivityRecognition.API).build();
+
         mGoogleApiClient.connect();
     }
 
     public void buildGeofence(){
-
-
-
-
-
         mGeofence = new Geofence.Builder()
                 .setRequestId("UmassDartmouth")
                 .setCircularRegion(41.628931, -71.006228, 1000)
@@ -213,56 +223,15 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     public void removeGeofence(){
         if(DEBUG)Log.e(TAG,"Removing geofence");
         mGeofencePendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
         LocationServices.GeofencingApi.removeGeofences(
                 mGoogleApiClient,
                 // This is the same pending intent that was used in addGeofences().
                 mGeofencePendingIntent
         ).setResultCallback(this); // Result processed in onResult().
 
-        ActivityRecognition.ActivityRecognitionApi.removeActivityUpdates(mGoogleApiClient,activityHandlerPI);
+        ActivityRecognition.ActivityRecognitionApi.removeActivityUpdates(mGoogleApiClient, activityHandlerPI);
     }
-
-    public void exitApp(View view){
-        //Triggered when user clicks "Exit App"
-        String title = "Exit";
-        String message = "Are you sure you want to exit?\nYou will stop collecting data if you do";
-        AlertDialog.Builder builder = new AlertDialog.Builder(c)
-                .setTitle(title)
-                .setMessage(message)
-                .setCancelable(false)
-                .setPositiveButton("Exit",
-                        new Dialog.OnClickListener(){
-                            @Override
-                            public void onClick(
-                                    DialogInterface dialogInterface, int i){
-                                stopService(intent);
-                                if(mBound) {
-                                    unbindService(mConnection);
-                                    mBound = false;
-                                }
-                                removeGeofence();
-                                finishAffinity();
-                                return;
-                            }
-                        })
-                .setNegativeButton(android.R.string.cancel,
-                        new Dialog.OnClickListener() {
-                            @Override
-                            public void onClick(
-                                    DialogInterface dialog, int i) {
-                                dialog.dismiss();
-                            }
-                        });
-        AlertDialog alertDialog = builder.create();
-
-        // show it
-        alertDialog.show();
-
-
-
-    }
-
-
 
 
     public boolean firstTimeCheck(){
@@ -330,22 +299,66 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            Intent intent = new Intent(this, Settings.class);
+            startActivity(intent);
             return true;
+        }
+        else if(id==R.id.action_sendfeedback){
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            Uri data = Uri.parse("mailto:vshekar@umassd.edu?subject=Traffic App Feedback&body=");
+            intent.setData(data);
+            startActivity(intent);
+        }
+        else if(id==R.id.action_exit){
+            String title = "Exit";
+            String message = "Are you sure you want to exit?\nYou will stop collecting data if you do";
+            AlertDialog.Builder builder = new AlertDialog.Builder(c)
+                    .setTitle(title)
+                    .setMessage(message)
+                    .setCancelable(false)
+                    .setPositiveButton("Exit",
+                            new Dialog.OnClickListener(){
+                                @Override
+                                public void onClick(
+                                        DialogInterface dialogInterface, int i){
+                                    stopService(intent);
+                                    if(mBound) {
+                                        unbindService(mConnection);
+                                        mBound = false;
+                                    }
+                                    removeGeofence();
+                                    finishAffinity();
+                                    return;
+                                }
+                            })
+                    .setNegativeButton(android.R.string.cancel,
+                            new Dialog.OnClickListener() {
+                                @Override
+                                public void onClick(
+                                        DialogInterface dialog, int i) {
+                                    dialog.dismiss();
+                                }
+                            });
+            AlertDialog alertDialog = builder.create();
+
+            // show it
+            alertDialog.show();
         }
 
         return super.onOptionsItemSelected(item);
     }
 
-    public void openSettings(View view) {
-        Intent intent = new Intent(this, Settings.class);
-        startActivity(intent);
-    }
+    @Override
+    public void onMapReady(GoogleMap map) {
+        LatLng umassD = new LatLng(41.628931,-71.006228);
 
-    public void sendFeedback(View view) {
-        Intent intent = new Intent(Intent.ACTION_VIEW);
-        Uri data = Uri.parse("mailto:vshekar@umassd.edu?subject=Traffic App Feedback&body=");
-        intent.setData(data);
-        startActivity(intent);
+        map.setMyLocationEnabled(true);
+        map.moveCamera(CameraUpdateFactory.newLatLngZoom(umassD, 15));
+
+        map.addMarker(new MarkerOptions()
+                .title("UMass Dartmouth")
+                .snippet("")
+                .position(umassD));
     }
 
 

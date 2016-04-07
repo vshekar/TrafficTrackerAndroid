@@ -1,29 +1,21 @@
 package edu.umassd.traffictracker;
 
 import android.app.IntentService;
-import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Looper;
 import android.preference.PreferenceManager;
 import android.util.Log;
-import android.view.Gravity;
-import android.widget.TextView;
 import android.widget.Toast;
-
-import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.ActivityRecognitionResult;
 import com.google.android.gms.location.DetectedActivity;
 
 /**
  * Created by Shekar on 4/1/2016.
  */
-public class ActivityHandler extends IntentService
-{
-    public ActivityHandler(){
+public class ActivityHandler extends IntentService {
+    public ActivityHandler() {
         super("ActivityHandler");
 
     }
@@ -39,49 +31,28 @@ public class ActivityHandler extends IntentService
     }
 
     @Override
-    public void onHandleIntent(Intent intent){
+    public void onHandleIntent(Intent intent) {
         Log.e("Activityhandler", "  Handling Intent!");
         DetectedActivity d = ActivityRecognitionResult.extractResult(intent).getMostProbableActivity();
         String activity = "";
-        if(d.equals(DetectedActivity.IN_VEHICLE)){
+        if (d.equals(DetectedActivity.IN_VEHICLE)) {
             activity = "In Vehicle";
-        }
-        else if(d.equals(DetectedActivity.ON_FOOT)){
+        } else if (d.equals(DetectedActivity.ON_FOOT)) {
             activity = "On foot";
 
-        }
-        else if(d.equals(DetectedActivity.STILL)){
+        } else if (d.equals(DetectedActivity.STILL)) {
             activity = "Still";
-        }
-        else{
+        } else {
             activity = d.toString();
         }
         String text = "Activity detected = " + activity;
         //Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
-        showToast(text);
+        //showToast(text);
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         SharedPreferences.Editor editor = prefs.edit();
-        editor.putString("activity",activity);
+        editor.putString("activity", activity);
         editor.commit();
         Log.e("Activityhandler", "Activity detected = " + prefs.getString("activity", "UNKNOWN"));
-
-        //TextView t = (TextView)findViewById(R.id.textView);
-
-
-    }
-
-    public class DisplayToast implements Runnable {
-        private final Context mContext;
-        String mText;
-
-        public DisplayToast(Context mContext, String text){
-            this.mContext = mContext;
-            mText = text;
-        }
-
-        public void run(){
-            Toast.makeText(mContext, mText, Toast.LENGTH_SHORT).show();
-        }
     }
 
 }

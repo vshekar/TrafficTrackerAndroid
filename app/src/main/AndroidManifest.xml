@@ -42,7 +42,7 @@
         <service
             android:name=".ActivityHandler"
             android:exported="false"/>
-
+        <meta-data android:name="com.google.android.geo.API_KEY" android:value="AIzaSyCAYWyIzGGIHsUQhsJAZyYQ_16xAvphdRY"/>
     </application>
 
 </manifest>

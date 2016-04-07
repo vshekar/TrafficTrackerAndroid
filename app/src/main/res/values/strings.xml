@@ -1,7 +1,8 @@
 <resources>
     <string name="app_name">Traffic Tracker</string>
     <string name="action_settings">Settings</string>
-
+    <string name="action_exit">Exit App</string>
+    <string name="action_sendfeedback">Send Feedback</string>
 <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="title_activity_tracking">Tracking</string>

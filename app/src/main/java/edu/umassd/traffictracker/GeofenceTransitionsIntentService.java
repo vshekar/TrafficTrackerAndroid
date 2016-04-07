@@ -98,41 +98,43 @@ public class GeofenceTransitionsIntentService extends Service {
 
     protected void onHandleIntent(Intent intent) {
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
-        if (geofencingEvent.hasError()) {
-            String errorMessage = "Geofence Error!";
-            if(DEBUG)Log.e(TAG, errorMessage);
-            return;
-        }
+        if (geofencingEvent!=null) {
+            if (geofencingEvent.hasError()) {
+                String errorMessage = "Geofence Error!";
+                if (DEBUG) Log.e(TAG, errorMessage);
+                return;
+            }
 
-        // Get the transition type.
-        int geofenceTransition = geofencingEvent.getGeofenceTransition();
+            // Get the transition type.
+            int geofenceTransition = geofencingEvent.getGeofenceTransition();
 
-        trackingServiceIntent = new Intent(this,TrackingService.class);
+            trackingServiceIntent = new Intent(this, TrackingService.class);
 
-        // Test that the reported transition was of interest.
-        if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER ) {
-            if(DEBUG)Log.e(TAG, "GEOFENCE_TRANSITION_ENTER");
-            Toast.makeText(getApplicationContext(), "Entered UMass Dartmouth Campus!", Toast.LENGTH_LONG).show();
-            mNotifyBuilder.setContentText("Entered UMass. Status : Tracking");
+            // Test that the reported transition was of interest.
+            if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER) {
+                if (DEBUG) Log.e(TAG, "GEOFENCE_TRANSITION_ENTER");
+                Toast.makeText(getApplicationContext(), "Entered UMass Dartmouth Campus!", Toast.LENGTH_LONG).show();
+                mNotifyBuilder.setContentText("Entered UMass. Status : Tracking");
 
-            NotificationManager mNotifyMgr = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-            mNotifyMgr.notify(mNotificationId,mNotifyBuilder.build());
-            //Starting service
-            this.startService(trackingServiceIntent);
-            this.serviceStarted = true;
-        }
+                NotificationManager mNotifyMgr = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                mNotifyMgr.notify(mNotificationId, mNotifyBuilder.build());
+                //Starting service
+                this.startService(trackingServiceIntent);
+                this.serviceStarted = true;
+            }
 
 
-        if(geofenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT){
-            Toast.makeText(getApplicationContext(), "Exiting UMass Dartmouth Campus!", Toast.LENGTH_LONG).show();
-            mNotifyBuilder.setContentText("Exited UMass. Status : Not Tracking");
-            NotificationManager mNotifyMgr =
-                    (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-            mNotifyMgr.notify(
-                    mNotificationId,
-                    mNotifyBuilder.build());
-            if(DEBUG)Log.e(TAG, "GEOFENCE_TRANSITION_EXIT");
-            stopTracking();
+            if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT) {
+                Toast.makeText(getApplicationContext(), "Exiting UMass Dartmouth Campus!", Toast.LENGTH_LONG).show();
+                mNotifyBuilder.setContentText("Exited UMass. Status : Not Tracking");
+                NotificationManager mNotifyMgr =
+                        (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                mNotifyMgr.notify(
+                        mNotificationId,
+                        mNotifyBuilder.build());
+                if (DEBUG) Log.e(TAG, "GEOFENCE_TRANSITION_EXIT");
+                stopTracking();
+            }
         }
     }
 
