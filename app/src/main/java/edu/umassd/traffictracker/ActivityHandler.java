@@ -32,19 +32,11 @@ public class ActivityHandler extends IntentService {
 
     @Override
     public void onHandleIntent(Intent intent) {
-        Log.e("Activityhandler", "  Handling Intent!");
+        //Log.e("Activityhandler", "  Handling Intent!");
         DetectedActivity d = ActivityRecognitionResult.extractResult(intent).getMostProbableActivity();
         String activity = "";
-        if (d.equals(DetectedActivity.IN_VEHICLE)) {
-            activity = "In Vehicle";
-        } else if (d.equals(DetectedActivity.ON_FOOT)) {
-            activity = "On foot";
+        activity = d.toString();
 
-        } else if (d.equals(DetectedActivity.STILL)) {
-            activity = "Still";
-        } else {
-            activity = d.toString();
-        }
         String text = "Activity detected = " + activity;
         //Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
         //showToast(text);

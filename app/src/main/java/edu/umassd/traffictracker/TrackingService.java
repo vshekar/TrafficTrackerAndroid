@@ -202,6 +202,7 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
 
         //If the accuracy of the location reading is less than 4.0 meters
         if (location != null) {
+
             mLastLocation = new Location(location);
             //Get latitude and longitude
             double lat = mLastLocation.getLatitude();
@@ -214,26 +215,67 @@ public class TrackingService extends Service implements GoogleApiClient.Connecti
 
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
 
-            String op = Long.toString(utcTime) + "," + Double.toString(lat) + "," + Double.toString(lng)+ "," + Double.toString(mLastLocation.getAccuracy()) + ","+ prefs.getString("activity", "UNKNOWN") +"\n" ;
-            if(DEBUG)Log.e(TAG, "onLocationChanged GoogleAPI: " + op);
+            if (!prefs.getString("activity", "UNKNOWN").toLowerCase().contains("STILL".toLowerCase())) {
+                String op = Long.toString(utcTime) + "," + Double.toString(lat) + "," + Double.toString(lng) + "," + Double.toString(mLastLocation.getAccuracy()) + "," + prefs.getString("activity", "UNKNOWN") + "\n";
+                if (DEBUG) Log.e(TAG, "onLocationChanged GoogleAPI NOT_STILL: " + op);
 
-            writeToFile(filename, op);
-            if(current_points < TOTAL_POINTS){
-                if(DEBUG)Log.e(TAG, "Current Points = " + Integer.toString(current_points));
-                current_points++;
+                writeToFile(filename, op);
+                incrementPoints();
             }
-            else{
-                if(DEBUG)Log.e(TAG, "Reached max points creating new file and uploading ");
-                current_points = 0;
-                //new uploadData().execute();
+            else if(mLastLocation.getAccuracy()<15){
+                String op = Long.toString(utcTime) + "," + Double.toString(lat) + "," + Double.toString(lng) + "," + Double.toString(mLastLocation.getAccuracy()) + "," + prefs.getString("activity", "UNKNOWN") + "\n";
+                if (DEBUG) Log.e(TAG, "onLocationChanged GoogleAPI STILL: " + op);
 
-                createNewFile();
+                writeToFile(filename, op);
+                incrementPoints();
+            }
+
+
+
+            //Change rate of GPS collection based on activity
+            String str1 = prefs.getString("activity", "UNKNOWN");
+            if (str1.toLowerCase().contains("STILL".toLowerCase())){
+                if(DEBUG)Log.e(TAG, "Phone is still, collecting GPS once per minute" );
+                mLocationRequest.setInterval(60000);
+                mLocationRequest.setSmallestDisplacement(30);
+            }
+            else if (str1.toLowerCase().contains("ON_FOOT".toLowerCase())){
+                if(DEBUG)Log.e(TAG, "Phone is on_foot, collecting GPS once per 5 seconds" );
+                mLocationRequest.setInterval(5000);
+                mLocationRequest.setSmallestDisplacement(2);
+            }
+            else if (str1.toLowerCase().contains("IN_VEHICLE".toLowerCase())){
+                if(DEBUG)Log.e(TAG, "Phone is in_vehicle, collecting GPS once per 1 second" );
+                mLocationRequest.setInterval(1000);
+                mLocationRequest.setSmallestDisplacement(2);
+            }
+            else if (str1.toLowerCase().contains("UNKNOWN".toLowerCase())){
+                if(DEBUG)Log.e(TAG, "Phone is Unknown, collecting GPS once per 5 seconds" );
+                mLocationRequest.setInterval(5000);
+                mLocationRequest.setSmallestDisplacement(2);
+            }
+            else {
+                if(DEBUG)Log.e(TAG, "None of the conditions satisfied, collecting GPS once per 5 seconds" );
+                mLocationRequest.setInterval(5000);
+                mLocationRequest.setSmallestDisplacement(2);
             }
 
         }
     }
 
+    public void incrementPoints() {
+        if(current_points < TOTAL_POINTS){
+            if(DEBUG)Log.e(TAG, "Current Points = " + Integer.toString(current_points));
+            current_points++;
+        }
+        else{
+            if(DEBUG)Log.e(TAG, "Reached max points creating new file and uploading ");
+            current_points = 0;
+            //new uploadData().execute();
 
+            createNewFile();
+        }
+    }
 
     @Override
     public void onDestroy() {
