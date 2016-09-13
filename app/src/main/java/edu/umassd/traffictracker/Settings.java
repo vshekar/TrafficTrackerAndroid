@@ -6,6 +6,9 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 
+/**
+ * This class handles the settings screen as defined in preferences.xml under the xml folder
+ */
 public class Settings extends AppCompatActivity {
 
     @Override

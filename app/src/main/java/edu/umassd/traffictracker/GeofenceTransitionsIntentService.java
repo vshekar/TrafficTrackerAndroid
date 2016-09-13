@@ -47,7 +47,10 @@ import javax.net.ssl.X509TrustManager;
  */
 
 
-
+/**
+ * This service runs in the background to detect whether the user has entered or exited the geofence
+ * It will spawn or destroy another "data collection" background service depending on where the user is
+ */
 public class GeofenceTransitionsIntentService extends Service {
     String TAG = "Geofence Transition Service";
     boolean DEBUG = true;
@@ -63,7 +66,10 @@ public class GeofenceTransitionsIntentService extends Service {
     //Create a notification. This will tell the user whether they are being tracked or not
     private NotificationCompat.Builder mNotifyBuilder;
     private Handler handler = new Handler();
+
+    //This timer task will upload newly created csv files every 10 minutes
     Timer timer = new Timer();
+
     TimerTask task = new TimerTask() {
         @Override
         public void run() {
@@ -95,7 +101,10 @@ public class GeofenceTransitionsIntentService extends Service {
         return mBinder;
     }
 
-
+    /**
+     * This method handles the geofence transitions
+     * @param intent
+     */
     protected void onHandleIntent(Intent intent) {
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
         if (geofencingEvent!=null) {
@@ -111,6 +120,7 @@ public class GeofenceTransitionsIntentService extends Service {
             trackingServiceIntent = new Intent(this, TrackingService.class);
 
             // Test that the reported transition was of interest.
+            //If the user enters the geofence create a toast and start the trackingService in the background
             if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER) {
                 if (DEBUG) Log.e(TAG, "GEOFENCE_TRANSITION_ENTER");
                 Toast.makeText(getApplicationContext(), "Entered UMass Dartmouth Campus!", Toast.LENGTH_LONG).show();
@@ -123,7 +133,7 @@ public class GeofenceTransitionsIntentService extends Service {
                 this.serviceStarted = true;
             }
 
-
+            //If the user exits the geofence create a toast and stop the tracking service
             if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT) {
                 Toast.makeText(getApplicationContext(), "Exiting UMass Dartmouth Campus!", Toast.LENGTH_LONG).show();
                 mNotifyBuilder.setContentText("Exited UMass. Status : Not Tracking");
@@ -138,6 +148,9 @@ public class GeofenceTransitionsIntentService extends Service {
         }
     }
 
+    /**
+     * This method handles the stopping and clean up of the tracking service
+     */
     public void stopTracking(){
         if(DEBUG)Log.e(TAG,"StopTracking");
         if(this.serviceStarted) {
@@ -147,7 +160,13 @@ public class GeofenceTransitionsIntentService extends Service {
         this.stopSelf();
     }
 
-
+    /**
+     * Method when the process is initialized
+     * @param intent
+     * @param flags
+     * @param startId
+     * @return
+     */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId){
         if(DEBUG)Log.e(TAG, "onStartCommand");
@@ -160,13 +179,20 @@ public class GeofenceTransitionsIntentService extends Service {
         return START_STICKY;
     }
 
-
+    /**
+     * Method not used: To get the current status of the internet connection
+     * @param context
+     * @return
+     */
     private NetworkInfo getNetworkInfo(Context context) {
         ConnectivityManager connManager = (ConnectivityManager)
                 context.getSystemService(Context.CONNECTIVITY_SERVICE);
         return connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
     }
 
+    /**
+     * Creates a notification when the transition service is active
+     */
     public void setupForeground(){
         trackingActivityIntent = new Intent(this, MainActivity.class);
         trackingActivityIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -180,12 +206,19 @@ public class GeofenceTransitionsIntentService extends Service {
         startForeground(mNotificationId,mNotifyBuilder.build());
     }
 
+    /**
+     * Initializes timer when the service is first created
+     * This triggers the csv file upload routine
+     */
     @Override
     public void onCreate(){
         super.onCreate();
         timer.schedule(task, 0, 600000);
     }
 
+    /**
+     * Method to handle clean up of background service
+     */
     @Override
     public void onDestroy(){
         super.onDestroy();
@@ -197,7 +230,9 @@ public class GeofenceTransitionsIntentService extends Service {
     }
 
 
-
+    /**
+     * Upload csv file routine
+     */
     public void uploadFiles(){
 
         String[] paths;
@@ -249,7 +284,9 @@ public class GeofenceTransitionsIntentService extends Service {
         }
     }
 
-
+    /**
+     * Async task to upload one file
+     */
     private class uploadData extends AsyncTask<String, String, String> {
         private static final String TAG = "UPLOAD_TASK";
         boolean DEBUG = true;
@@ -310,6 +347,7 @@ public class GeofenceTransitionsIntentService extends Service {
                 return null;
             }
         }
+
 
         @Override
         protected String doInBackground(String... params) {

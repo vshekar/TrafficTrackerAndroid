@@ -35,8 +35,9 @@ import com.google.android.gms.maps.*;
 import com.google.android.gms.maps.model.*;
 
 
-
-
+/**
+ * Starting point for the app. The app first connects to the GooglePlay services (Which provides access to GPS, Activity Monitor etc.)
+ */
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,GoogleApiClient.OnConnectionFailedListener, ResultCallback, OnMapReadyCallback {
     public Geofence mGeofence;
     public GeofencingRequest gfEnter;
@@ -54,7 +55,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     final Context c = this;
     public static Context context;
 
-
+    /**
+     * mConnection is the app's link to the background process. By using mConnection we can access the service's methods
+     */
     public ServiceConnection mConnection = new ServiceConnection() {
 
         @Override
@@ -73,17 +76,27 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         };
 
 
+    /**
+     * This is the first function that triggers when the app starts
+     * The function first checks whether the app has been started for the first time
+     * and then attempts to connect to the GoogleApiClient
+     * @param savedInstanceState
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         if(DEBUG)Log.e(TAG, "OnCreate");
         super.onCreate(savedInstanceState);
+        //Check if app is started for the first time
         boolean ftc = firstTimeCheck();
         MainActivity.context = getApplicationContext();
+        //Connect to the GoogleApiClient
         mGoogleApiClient = new GoogleApiClient.Builder(this)
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
                 .addApi(LocationServices.API)
                 .addApi(ActivityRecognition.API).build();
+
+        //Check if background service is already running (For cases when the app is closed and relaunched)
         if (isMyServiceRunning(GeofenceTransitionsIntentService.class) && !ftc){
             //If the geofencetransition is running already show status
             if(DEBUG)Log.e(TAG, "geofencetransition IS running!");
@@ -103,28 +116,36 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         }
 
+        //Code to display google map of the campus instead of boring buttons
         MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.map);
         if(mapFragment != null)
             mapFragment.getMapAsync(this);
     }
 
+    /**
+     * If background service is NOT running and the app has NOT been started for the first time,
+     * This function is run to initilize the different components of the app
+     */
     public void initialize(){
         //geofencetransition is not running, start it here
         setContentView(R.layout.activity_main);
+        //Build the geofence
         buildGeofence();
+        //start background service
         intent = new Intent(this, GeofenceTransitionsIntentService.class);
         startService(intent);
         connectGoogleApiClient(intent);
         //Bind the geofenceTransition service to access its methods
         if (!mBound)
             bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+        //Check if GPS services are available
         checkGPS();
-
-
 
     }
 
-
+    /**
+     * THis function is triggered when the app is destroyed. Unbinds itself from the background service
+     */
     @Override
     protected void onDestroy(){
         if(DEBUG)Log.e(TAG, "OnDestroy");
@@ -136,6 +157,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     }
 
+    /**
+     * This function is triggered when the app sucessfully connects to the GoogleAPI
+     * @param arg0
+     */
     @Override
     public void onConnected(Bundle arg0) {
         // Once connected with google api, Add the geofence
@@ -154,9 +179,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         activityHandler = new Intent(this, ActivityHandler.class);
         activityHandlerPI = PendingIntent.getService(this, 1, activityHandler, PendingIntent.FLAG_UPDATE_CURRENT);
 
+        //Requests activity updates every x ms currently 5000 ms
         ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates(mGoogleApiClient,5000,activityHandlerPI);
-
-
 
     }
 
@@ -179,7 +203,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     }
 
 
-
+    /**
+     * Checks if GPS is enabled. If not, ask user to activate it.
+     * If user does not activate GPS co-ordinates will be coarse.
+     */
     public void checkGPS(){
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         if( !locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ) {
@@ -197,6 +224,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
+    /**
+     * Method that handles connection to googleAPI
+     * @param intent
+     */
     public void connectGoogleApiClient(Intent intent){
         mGeofencePendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
@@ -205,6 +236,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         mGoogleApiClient.connect();
     }
 
+    /**
+     * Method to build GeoFence at the center of UMass Dartmouth with a 1000 meter radius
+     * Set up to trigger when the user enters or exits the geofence
+     */
     public void buildGeofence(){
         mGeofence = new Geofence.Builder()
                 .setRequestId("UmassDartmouth")
@@ -220,6 +255,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 .build();
     }
 
+    /**
+     * Remove geofence when exiting the app. The geofence has to be explicitly removed or it will
+     * still trigeer when the user is not running the app (or the background process is not running)
+     */
     public void removeGeofence(){
         if(DEBUG)Log.e(TAG,"Removing geofence");
         mGeofencePendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
@@ -233,15 +272,22 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         ActivityRecognition.ActivityRecognitionApi.removeActivityUpdates(mGoogleApiClient, activityHandlerPI);
     }
 
-
+    /**
+     * Performs a first time user check. If first time user, displays IRB form otherwise start app
+     * @return
+     */
     public boolean firstTimeCheck(){
         boolean result,irb;
+        //Check preferences for first time run
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         result = prefs.getBoolean("first_time", true);
         irb = prefs.getBoolean("irbAccepted",false);
         return result&&!irb;
     }
 
+    /**
+     * Displays the IRB form on screen.
+     */
     public void showIRB() {
         String title = "IRB Approval form";
         String message = this.getString(R.string.irb);
@@ -283,12 +329,18 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         alertDialog.show();
     }
 
+    /**
+     * Inflates options menu
+     * @param menu
+     * @return
+     */
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
+
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -348,6 +400,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         return super.onOptionsItemSelected(item);
     }
 
+    /**
+     * places markers on each parking lot on the map. Not essential for the app
+     * @param map
+     */
     @Override
     public void onMapReady(GoogleMap map) {
         LatLng[] Lot = new LatLng[16];
@@ -406,6 +462,11 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     }
 
 
+    /**
+     * Checks if the background service is running
+     * @param serviceClass
+     * @return
+     */
     private boolean isMyServiceRunning(Class<?> serviceClass) {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
