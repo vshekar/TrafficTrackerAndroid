@@ -1,4 +1,4 @@
-package edu.umassd.traffictracker;
+package service;
 
 
 import android.app.Service;

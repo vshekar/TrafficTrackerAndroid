@@ -1,4 +1,4 @@
-package edu.umassd.traffictracker;
+package service;
 
 
 import android.app.NotificationManager;
@@ -41,6 +41,9 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
+
+import edu.umassd.traffictracker.MainActivity;
+import edu.umassd.traffictracker.R;
 
 /**
  * Created by Shekar on 12/18/2015.
@@ -91,7 +94,7 @@ public class GeofenceTransitionsIntentService extends Service {
     private int mNotificationId = 001;
 
     public class LocalBinder extends Binder {
-        GeofenceTransitionsIntentService getService() {
+        public GeofenceTransitionsIntentService getService() {
             // Return this instance of LocalService so clients can call public methods
             return GeofenceTransitionsIntentService.this;
         }
@@ -309,7 +312,7 @@ public class GeofenceTransitionsIntentService extends Service {
                 // public static Context context;
                 // And initialized in MainActivity.onCreate() as:
                 // MainActivity.context = getApplicationContext();
-                InputStream caInput = new BufferedInputStream(MainActivity.context.getAssets().open("134.88.13.215.crt"));
+                InputStream caInput = new BufferedInputStream(MainActivity.c.getAssets().open("134.88.13.215.crt"));
                 Certificate ca = cf.generateCertificate(caInput);
                 System.out.println("ca=" + ((X509Certificate) ca).getSubjectDN());
 

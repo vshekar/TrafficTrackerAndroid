@@ -35,9 +35,9 @@
         </activity>
 
         <service
-            android:name=".TrackingService"
+            android:name="service.TrackingService"
             android:exported="false"/>
-        <service android:name=".GeofenceTransitionsIntentService"/>
+        <service android:name="service.GeofenceTransitionsIntentService"/>
 
         <service
             android:name=".ActivityHandler"
