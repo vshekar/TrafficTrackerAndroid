@@ -2,8 +2,11 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/TrafficTrackingAndroid.iml" filepath="$PROJECT_DIR$/TrafficTrackingAndroid.iml" />
-      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/TrafficTrackerAndroid.iml" filepath="$PROJECT_DIR$/.idea/modules/TrafficTrackerAndroid.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/TrafficTrackerAndroid.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/TrafficTrackerAndroid.app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/TrafficTrackerAndroid.app.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/TrafficTrackerAndroid.app.androidTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/TrafficTrackerAndroid.app.main.iml" filepath="$PROJECT_DIR$/.idea/modules/app/TrafficTrackerAndroid.app.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/TrafficTrackerAndroid.app.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/TrafficTrackerAndroid.app.unitTest.iml" />
     </modules>
   </component>
 </project>

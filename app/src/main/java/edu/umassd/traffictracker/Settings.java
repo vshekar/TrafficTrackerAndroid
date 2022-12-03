@@ -1,10 +1,11 @@
 package edu.umassd.traffictracker;
 
 import android.preference.PreferenceFragment;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 /**
  * This class handles the settings screen as defined in preferences.xml under the xml folder

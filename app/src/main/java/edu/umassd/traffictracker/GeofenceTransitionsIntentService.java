@@ -1,6 +1,7 @@
 package edu.umassd.traffictracker;
 
 
+import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -14,9 +15,10 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
-import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.Toast;
+
+import androidx.core.app.NotificationCompat;
 
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingEvent;
@@ -76,7 +78,6 @@ public class GeofenceTransitionsIntentService extends Service {
             handler.post(new Runnable() {
                              @Override
                              public void run() {
-
                                  //new uploadData().execute();
                                  uploadFiles();
 
@@ -197,13 +198,16 @@ public class GeofenceTransitionsIntentService extends Service {
         trackingActivityIntent = new Intent(this, MainActivity.class);
         trackingActivityIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         trackingActivityPendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, trackingActivityIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+        NotificationManager notificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         mNotifyBuilder = new NotificationCompat.Builder(this)
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle("Traffic Tracker")
                 .setContentText("Outside UMass: Not tracking")
                 .setContentIntent(trackingActivityPendingIntent)
                 .setAutoCancel(true);
-        startForeground(mNotificationId,mNotifyBuilder.build());
+        notificationManager.notify(1, mNotifyBuilder.build());
+//        startForeground(mNotificationId,mNotifyBuilder.build());
     }
 
     /**
@@ -268,7 +272,7 @@ public class GeofenceTransitionsIntentService extends Service {
                 String[] finalPaths;
 
 
-                if(paths.length != 0 && paths != null) {
+                if(paths != null && paths.length != 0) {
                     if(DEBUG)Log.e("UPLOAD_TASK : ",paths[0]);
                     uploadData asyncTaskRunner = new uploadData();
                     asyncTaskRunner.execute(paths);
